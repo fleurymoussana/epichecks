@@ -74,9 +74,10 @@ country_feedback <- function(x,
                                         "recommendation/recommandation"   = Recommendation))
 
 
-  ## create a folder for the week
+  ## pull together file path for the current week
   week_path <- str_glue(output_path, "/", current_week)
 
+  ## create a folder for the week
   dir.create(week_path)
 
 
@@ -94,4 +95,8 @@ country_feedback <- function(x,
     export(alert_list[[i]], file = file_path, which = "Alerts")
 
   }
+
+  ## return data frames of message list and alert list
+  list(message_list = message_list,
+       alert_list = alert_list)
 }

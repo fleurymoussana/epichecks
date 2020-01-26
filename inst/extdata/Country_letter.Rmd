@@ -1,0 +1,175 @@
+---
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+
+## set the chunks of code to not show up in output
+knitr::opts_chunk$set(echo = FALSE)
+
+## Installing required packages for this template
+required_packages <- c("here",       # define pathways to files
+                       "rmarkdown",  # for formatting documents
+                       "markdown",   # for formatting documents
+                       "knitr"       # for cleaner tables
+                       )
+
+for (pkg in required_packages) {
+  ## install packages if not already present
+  if (!pkg %in% rownames(installed.packages())) {
+    install.packages(pkg)
+  }
+  
+  ## load packages to this current session 
+  library(pkg, character.only = TRUE)
+  }
+```
+
+```{r logo, fig.align='right', out.width = "50%"}
+## load the WHO logo from the package directory
+knitr::include_graphics(system.file("extdata", "WHO_logo.png", package = "epichecks"))
+```
+
+  
+  
+\raggedleft 
+
+` `  
+` `  
+` `  
+
+\raggedright
+
+To Whom it May Concern, 
+
+` `  
+` `  
+
+**Regarding: `r i` IDSR data for week `r current_week`** 
+
+` `  
+` `  
+` `  
+
+Dear Sir or Madam, 
+` `
+
+This is to acknowledge receipt of routine surveillance data for your country (`r i`)
+for week `r current_week` and to thank you for your 
+continuous contribution to the global health security in the African region. 
+
+In order to continuously improve the effectiveness of disease surveillance in the 
+African region, we would like to draw your attention to missing data and possible
+surpassed thresholds for verification and action where required. 
+
+```{r messages}
+## subset to current country being looped over
+y <- message_list[[i]]
+
+## get counts of messages
+num_messages <- nrow(y)
+
+## get counts of diseases
+num_messages_disease <- length(unique(y[["disease/maladie"]]))
+
+## get counts of districts
+num_messages_district <- length(unique(y$district))
+
+```
+
+
+```{r alerts}
+
+## subset to current country being looped over 
+y <- alert_list[[i]]
+
+## get counts of messages
+num_alerts <- nrow(y)
+
+## get counts of diseases
+num_alerts_disease <- length(unique(y[["disease/maladie"]]))
+
+## get counts of districts
+num_alerts_district <- length(unique(y$district))
+```
+
+There were `r num_messages` issues of missing data, relating to 
+`r num_messages_disease` different diseases in `r num_messages_district` different
+districts. Please verify if the missing data correspond to zero cases or faults
+in reporting, and amend the report accordingly. Indeed, as per the IDSR strategy, 
+districts that do not have any cases should still be reported as zero (0) and 
+not left blank.  
+
+There were `r num_alerts` alert thresholds triggered, relating to 
+`r num_alerts_disease` different diseases in `r num_alerts_district` different 
+districts. 
+
+Kindly find in the attached Excel spreadsheet, details of the diseases and districts 
+with missing data or surpassed thresholds that need to be addressed. 
+
+Please send your verification report and/or revised IDSR weekly report to: [afrooutbreak@who.int](mailto:afrooutbreak@who.int).  
+
+Sincerely yours, 
+
+On behalf of the WHO AFRO  
+
+HIR Team  
+
+\pagebreak
+
+
+```{r logo2, fig.align='right', out.width = "50%"}
+
+knitr::include_graphics(system.file("extdata", "WHO_logo.png", package = "epichecks"))
+```
+
+` `  
+` `  
+` ` 
+
+A qui de droit, 
+` `  
+` ` 
+
+**Sujet: `r i` Donées de SIMR relatives à la semaine `r current_week`**
+
+` `  
+` `  
+` `  
+
+Cher Monsieur ou Madame, 
+` `
+
+Nouse accusons réception des donées de surveillance de routine de votre pays (`r i`)
+de la semaine `r current_week` et vous remercions de votre 
+inlassable contribution à la sécurité sanitaire mondiale dans la région africaine.  
+
+
+En vue de continuer à améliorer l'efficacité de la surveillance des maladies dans
+la région africaine, nouse aimerions attire votre attention sur les donées 
+manquantes et les situations ou le seuil d'alerte a été atteint, dans une 
+perspective de vérification et d'action si nécessaire.  
+
+Il y a eu `r num_messages` données manquantes concernant `r num_messages_disease`
+maladies différentes et `r num_messages_district` districts sanitaires différents. 
+En effet, conformément à la stratégie SIMR, les districts qui n'ont pas observé de
+cas ou décès d'une maladie donée, devrait rapporte zéro (0) et non laisser les 
+cellules vides.  
+
+Il y a eu `r num_alerts` situations ou le seuil d'alerte a été atteint, 
+concernant nottament`r num_alerts_disease` maladies différents dans
+`r num_alerts_district` districts différents.  
+
+Veuillez trouver ci-joint, un fichier Excel comporant des détails sur nos 
+observations sur les donées manquantes et les seuils d'alerte pour votre action. 
+
+Veuillez soumettre votre rapport de vérification et/ou le rapport hebdomadaire 
+de SIMR amende à l'addresse suivant: [afrooutbreak@who.int](mailto:afrooutbreak@who.int).
+
+Bien cordialement.
+
+Pour OMS AFRO  
+L'équipe HIR
+
+
+

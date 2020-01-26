@@ -2,6 +2,7 @@
 
 export(clean_data)
 export(country_feedback)
+export(country_letters)
 export(missing_checker)
 export(threshold_checker)
 importFrom(aweek,as.aweek)

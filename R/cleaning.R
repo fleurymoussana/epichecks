@@ -16,6 +16,13 @@
 #' @export
 clean_data <- function(x) {
 
+  ## throw warning if week numbers above 60
+  if (max(x$week_number, na.rm = TRUE) >= 60) {
+    warning("Week number over 60 reported. Will be ignored and epiweek will be
+    set to NA for these rows")
+  }
+
+
   ## get excel file path for disease dictionary
   disease_path <- system.file("extdata", "disease_dictionary.xlsx", package = "epichecks")
 

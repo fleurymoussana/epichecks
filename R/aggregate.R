@@ -2,7 +2,7 @@
 #' dataset.
 #'
 #' @param x A data frame
-#' @param output_file Path to where you would like to save a RDS file of merge data
+#' @param output_path Path to where you would like to save a RDS file of merge data
 #'
 #' @importFrom dplyr bind_rows
 #' @importFrom purrr map modify_at
@@ -14,7 +14,8 @@
 #'
 #' @export
 aggregator <- function(x,
-                       output_file = here::here("Data", "Outputs", "Merged.Rds")) {
+                       output_path
+                       ) {
   ## apply the function to each dataset in list
   x <- purrr::map(x, change_class)
 
@@ -23,7 +24,7 @@ aggregator <- function(x,
   x <- bind_rows(x)
 
   ## Save aggregated dataset in Rdataset file format
-  saveRDS(x, file = output_file)
+  saveRDS(x, file = output_path)
 
   ## return dataset
   x

@@ -23,20 +23,54 @@ contains helper function that standardize certain analyses.
 
 ## Installation
 
-You can install the released version of epichecks from
-[CRAN](https://CRAN.R-project.org) with:
+Currently the package is not on CRAN. Once it is - you can install the
+released version of epichecks from [CRAN](https://CRAN.R-project.org)
+with:
 
 ``` r
-install.packages("epichecks")
+# install.packages("epichecks")
 ```
 
-And the development version from [GitHub](https://github.com/) with:
+The development version can be installed from
+[GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
 remotes::install_github("R4IDSR/epichecks")
 ```
 
-Please note that the ‘sitrep’ project is released with a [Contributor
+## Folder set up
+
+In order for the funtions to work you need to have folders set up
+correctly.
+
+One folder which contains an R-project file (e.g. WHO\_AFRO.Rproj) and a
+Data folder. Within the data folder you need a processed folder, which
+contains IDSR data, and an outputs folder which contains another folder
+called Verification. Within verification the function will create a
+folder for each week and place outputs files in there.
+
+As an example:
+
+  - WHO AFRO
+      - Data
+          - Processed (contains IDSR data for each country)
+          - Outputs (where the output will go)
+              - Verification
+      - WHO\_AFRO.Rproj
+
+## Getting started
+
+Open your R project and type the below code.
+
+``` r
+library(epichecks)
+week_report()
+```
+
+This will produce aoutputs for week 35 of 2018 as an example. See
+?week\_report for details of parameters that can be adjusted.
+
+Please note that the ‘epichecks’ project is released with a [Contributor
 Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this
 project, you agree to abide by its terms.

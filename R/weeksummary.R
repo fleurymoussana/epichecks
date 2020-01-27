@@ -135,4 +135,7 @@ weekly_summary <- function(x,
 
     ## export message list to file
     export(summary_report, file = file_path, which = current_week)
+
+    ## return dataset
+    summary_report
 }

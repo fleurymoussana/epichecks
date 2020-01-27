@@ -61,15 +61,14 @@ As an example:
 
 ## Getting started
 
-Open your R project and type the below code.
+Open your R project and type the below code. This will produce outputs
+for week 35 of 2018 as an example. See ?week\_report for details of
+parameters that can be adjusted.
 
 ``` r
 library(epichecks)
 week_report()
 ```
-
-This will produce aoutputs for week 35 of 2018 as an example. See
-?week\_report for details of parameters that can be adjusted.
 
 Please note that the ‘epichecks’ project is released with a [Contributor
 Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this

@@ -17,9 +17,10 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks)
 <!-- badges: end -->
 
-The goal of {sitrep} is provide report templates for common
-epidemiological surveys and outbreak reports. The package further
-contains helper function that standardize certain analyses.
+The goal of {epichecks} is to provide functions for simplifying data
+quality checks and threshold analyses for IDSR data. The package further
+contains helper functions that automate the production of feedback
+documents for countries.
 
 ## Installation
 
@@ -35,7 +36,7 @@ The development version can be installed from
 [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("remotes")
+install.packages("remotes")
 remotes::install_github("R4IDSR/epichecks")
 ```
 
@@ -61,9 +62,10 @@ As an example:
 
 ## Getting started
 
-Open your R project and type the below code. This will produce outputs
-for week 35 of 2018 as an example. See ?week\_report for details of
-parameters that can be adjusted.
+Open your R project and type the below code.
+
+This will produce outputs for week 35 of 2018 as an example. See
+?week\_report for details of parameters that can be adjusted.
 
 ``` r
 library(epichecks)

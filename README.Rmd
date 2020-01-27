@@ -23,9 +23,10 @@ knitr::opts_chunk$set(
 [![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks)
 <!-- badges: end -->
 
-The goal of {sitrep} is provide report templates for common epidemiological
-surveys and outbreak reports. The package further contains helper function that
-standardize certain analyses. 
+The goal of {epichecks} is to provide functions for simplifying data quality
+checks and threshold analyses for IDSR data.
+The package further contains helper functions that automate the production of 
+feedback documents for countries. 
 
 
 ## Installation
@@ -40,7 +41,7 @@ Once it is - you can install the released version of epichecks from [CRAN](https
 The development version can be installed from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("remotes")
+install.packages("remotes")
 remotes::install_github("R4IDSR/epichecks")
 ```
 ## Folder set up 
@@ -65,7 +66,8 @@ As an example:
 
 ## Getting started 
 
-Open your R project and type the below code. 
+Open your R project and type the below code.  
+
 This will produce outputs for week 35 of 2018 as an example. 
 See ?week_report for details of parameters that can be adjusted. 
 

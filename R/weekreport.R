@@ -57,7 +57,7 @@ week_report <- function(current_week = "2018-W35",
   processed_data <- purrr::map(processed_data, clean_data)
 
   ## pull country name from first row of country variable
-  cleaned_names <- sapply(processed_data, function(x) x$country[1L])
+  cleaned_names <- purrr::map_chr(purrr::map(processed_data, "country"), 1L)
 
   ## overwrite names in processed_data to be simplified country names
   names(processed_data) <- cleaned_names

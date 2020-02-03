@@ -1,0 +1,141 @@
+---
+title: "World Health Organization African Region  \nIntegrated Disease Surveillance and Response  \nMonthly Epidemiological Bulletin  \nBulletin N°2018-01 (January 2018)"
+output: 
+  word_document: 
+    toc: TRUE
+---
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// define current month \\\
+--------------------------------------------------------------------------------
+ 
+This section is used to define your month of interest. It will be used later
+to filter your outputs. 
+You can also set the day which your epiweek starts on - the default for this
+is Monday. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r define_current_month, echo = FALSE}
+
+## set the day that defines the beginning of your epiweek.
+aweek::set_week_start("Monday")
+
+## set starting week for the month
+start_week <- aweek::as.aweek("2018-W01")
+
+## set the ending week 
+end_week <- aweek::as.aweek("2018-W05")
+```
+
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// setup \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ Several packages are required for different aspects of  analysis with *R*. 
+You will need to install these before starting. 
+
+These packages can be quite large and may take a while to download in the
+field. If you have access to a USB key with these packages, it makes sense to
+copy and paste the packages into your computer's R package library 
+(run the command .libPaths() to see the folder path). 
+
+For help installing packages, please visit https://r4epis.netlify.com/welcome
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+
+```{r setup, include=FALSE}
+
+## set the chunks of code to not show up in output
+knitr::opts_chunk$set(echo = FALSE)
+
+## Installing required packages for this template
+required_packages <- c("here",       # define pathways to files
+                       "rio",     # import datasets
+                       "dplyr",   # clean/shape data
+                       "tidyr",   # clean/shape data
+                       "stringr", # clean text 
+                       "purrr",   # looping over multiple datasets in a list
+                       "aweek",   # converting between epiweeks and dates
+                       "knitr"       # for cleaner tables
+                       )
+
+for (pkg in required_packages) {
+  ## install packages if not already present
+  if (!pkg %in% rownames(installed.packages())) {
+    install.packages(pkg)
+  }
+  
+  ## load packages to this current session 
+  library(pkg, character.only = TRUE)
+  }
+```
+
+
+
+
+# I- Introduction notes 
+The International Health Regulations (IHR), adopted in 2005, state that each 
+country shall strengthen and maintain the capacity to detect, assess, and respond
+to all events that may constitute public health emergencies of international 
+concern (PHEICs) and report them to the World Health Organization (WHO).  
+In the African Region, the IHR priorities are being achieved through the 
+implementation of the Integrated Disease Surveillance (IDSR) adopted by Member 
+States in 1998.  
+The IDSR strategy aims to develop and implement comprehensive surveillance and 
+response systems with the aim of building capacities for early detection and 
+timely responses to major public health events. As per their IHR obligations and
+IDSR commitments, Member States submit to the WHO regional Office for Africa, 
+on a weekly basis, reports on diseases and conditions under surveillance.  
+These reports are collated at the WHO regional office to provide an overview on 
+the status of diseases and conditions under surveillance in the region and to 
+analyze events that may traverse international boundaries. The current bulletin 
+synthetizes the completeness and timeliness of reporting as well as the results 
+of alert threshold analyses for diseases and conditions under surveillance in 
+the WHO African region. The analyses included in this bulletin are strictly based
+on data reported by Member States as a result of the implementation of the IDSR,
+which are limited to suspect cases and deaths. This bulletin also provides an 
+overview of outbreaks and other public health emergencies ongoing in the African 
+region as per the end of the month of publication. This bulletin focuses in 
+epidemiological analysis and does not provide any information on responses to 
+ongoing events in the WHO African region.  
+  
+  
+# II- Highlights 
+
+
+
+# III- Disease Surveillance in the African region 
+  
+  
+  
+## III-1. Completeness and timeliness in reporting to the WHO African region 
+  
+  
+## III-2. Alert thresholds for diseases and conditions under surveillance 
+  
+  
+# IV- Ongoing outbreaks and other health emergencies in the region 
+  
+  
+## IV-1. Overview of ongoing events 
+  
+  
+## IV-2. Cholera outbreaks in the region 
+  
+  
+## IV-3. Measles outbreaks in the region 
+  
+  
+## IV-4. Poliomyelitis outbreaks in the region 
+  
+  
+## IV-5. Yellow fever outbreaks in the region 
+
+# V- Interpretation of the epidemiological situation and recommendations to Member States
+
+
+
+

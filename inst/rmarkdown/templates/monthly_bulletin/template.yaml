@@ -1,0 +1,4 @@
+name: WHO AFRO monthly bulletin
+description: >
+  An automated WHO IDSR and PHE template for a monthly bulletin
+create_dir: false

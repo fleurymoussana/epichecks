@@ -34,10 +34,10 @@ with:
 
 In order to install the package you will first need to install an extra
 bit of software called
-[Rtools](https://cran.r-project.org/bin/windows/Rtools/). You can
-download the installer from:
-<https://cran.r-project.org/bin/windows/Rtools/> Please install the
-version highlighted in green.
+[Rtools](https://cran.r-project.org/bin/windows/Rtools/).  
+You can download the installer from:
+<https://cran.r-project.org/bin/windows/Rtools/>  
+Please install the version highlighted in green.
 
 Once this is installed and you have restarted your computer, the
 development version of the package can be installed from

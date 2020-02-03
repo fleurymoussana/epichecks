@@ -45,7 +45,7 @@ week_report <- function(current_week = "2018-W35",
   ## set the current epiweek
   current_week <- aweek::as.aweek(current_week)
 
-  ## get paths of all the files in a folder with .xlsx file format
+  ## get paths of all the files in a folder with .csv file format
   file_paths <- Sys.glob(str_glue(input_path, "/",
                                   current_week,  "/", "*.csv"))
 

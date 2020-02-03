@@ -2,7 +2,8 @@
 #' dataset.
 #'
 #' @param x A data frame
-#' @param output_path Path to where you would like to save a RDS file of merge data
+#' @param output_path Path to where you would like to save a RDS file of merge data.
+#' Default is NULL - so no RDS file will be saved, just created for internal use.
 #'
 #' @importFrom dplyr bind_rows
 #' @importFrom purrr map modify_at
@@ -14,7 +15,7 @@
 #'
 #' @export
 aggregator <- function(x,
-                       output_path
+                       output_path = NULL
                        ) {
   ## apply the function to each dataset in list
   x <- purrr::map(x, change_class)
@@ -23,8 +24,10 @@ aggregator <- function(x,
   ## bind all dataframes together as rows
   x <- bind_rows(x)
 
-  ## Save aggregated dataset in Rdataset file format
-  saveRDS(x, file = output_path)
+  if (!is.null(output_path)) {
+    ## Save aggregated dataset in Rdataset file format
+    saveRDS(x, file = output_path)
+  }
 
   ## return dataset
   x

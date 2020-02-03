@@ -5,12 +5,13 @@
 \title{Set the class of IDSR processed data to be able to merge countries in to one
 dataset.}
 \usage{
-aggregator(x, output_path)
+aggregator(x, output_path = NULL)
 }
 \arguments{
 \item{x}{A data frame}
 
-\item{output_path}{Path to where you would like to save a RDS file of merge data}
+\item{output_path}{Path to where you would like to save a RDS file of merge data.
+Default is NULL - so no RDS file will be saved, just created for internal use.}
 }
 \description{
 Set the class of IDSR processed data to be able to merge countries in to one

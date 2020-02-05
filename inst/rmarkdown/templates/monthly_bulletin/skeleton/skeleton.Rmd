@@ -26,6 +26,12 @@ start_week <- aweek::as.aweek("2018-W01")
 
 ## set the ending week 
 end_week <- aweek::as.aweek("2018-W05")
+
+## pull together all weeks of interest 
+current_weeks <- aweek::factor_aweek(
+  c(start_week,
+    end_week)
+  )
 ```
 
 
@@ -45,7 +51,6 @@ copy and paste the packages into your computer's R package library
 For help installing packages, please visit https://r4epis.netlify.com/welcome
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
-
 ```{r setup, include=FALSE}
 
 ## set the chunks of code to not show up in output
@@ -59,7 +64,8 @@ required_packages <- c("here",       # define pathways to files
                        "stringr", # clean text 
                        "purrr",   # looping over multiple datasets in a list
                        "aweek",   # converting between epiweeks and dates
-                       "knitr"       # for cleaner tables
+                       "knitr",   # for cleaner tables
+                       "epichecks" # for WHO IDSR functions
                        )
 
 for (pkg in required_packages) {
@@ -74,6 +80,73 @@ for (pkg in required_packages) {
 ```
 
 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// read_data \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will read in the all csv files placed in folders for the weeks of 
+ interest. 
+ It will then do some data cleaning and simplify the names of datasets. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r read_data}
+
+## file path where IDSR processed data is
+input_path <- here::here("Data", "Processed")
+
+## get paths of all the files in weeks of interest folders with .csv file format
+file_paths <- Sys.glob(str_glue("{input_path}/{levels(current_weeks)}/*.csv"))
+
+## import each excel file individually saved in a list
+## do not bind them together imediately
+processed_data <- import_list(file_paths, rbind = FALSE, na = "NULL")
+
+
+## apply cleaning steps to each country dataset in list
+processed_data <- purrr::map(processed_data, clean_data)
+
+## pull country name from first row of country variable
+cleaned_names <- purrr::map_chr(purrr::map(processed_data, "country"), 1L)
+
+## overwrite names in processed_data to be simplified country names
+names(processed_data) <- cleaned_names
+```
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// flag_data \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will create flags for missings and thresholds in the datasets. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r flag_data}
+## run missing_checker over each dataset in list to flag missing counts
+processed_data <- purrr::map(processed_data, missing_checker)
+## run threshold_checker over each dataset in list to flag high counts
+processed_data <- purrr::map(processed_data, threshold_checker)
+```
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// aggregate_data \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will aggregate all datasets from the list in to one data frame. 
+ It will then filter for the weeks of interest. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r aggregate_data}
+
+## run aggregator function to pull together a merged dataset
+processed_data_agg <- aggregator(processed_data, output_path = NULL)
+
+## filter for weeks of interest 
+processed_data_agg <- filter(processed_data_agg, 
+                             epiweek >= start_week, 
+                             epiweek <= end_week)
+```
 
 
 # I- Introduction notes 

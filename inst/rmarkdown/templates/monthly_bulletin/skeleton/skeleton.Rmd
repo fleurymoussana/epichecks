@@ -54,7 +54,7 @@ For help installing packages, please visit https://r4epis.netlify.com/welcome
 ```{r setup, include=FALSE}
 
 ## set the chunks of code to not show up in output
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ## Installing required packages for this template
 required_packages <- c("here",       # define pathways to files

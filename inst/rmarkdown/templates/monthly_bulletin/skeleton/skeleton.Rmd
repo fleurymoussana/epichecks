@@ -18,6 +18,12 @@ is Monday.
 
 ```{r define_current_month, echo = FALSE}
 
+## set the current year 
+current_year <- 2018
+
+## set the current month 
+current_month <- "January"
+
 ## set the day that defines the beginning of your epiweek.
 aweek::set_week_start("Monday")
 
@@ -48,6 +54,8 @@ field. If you have access to a USB key with these packages, it makes sense to
 copy and paste the packages into your computer's R package library 
 (run the command .libPaths() to see the folder path). 
 
+Some packages are not on CRAN yet and need to be installed from github.
+
 For help installing packages, please visit https://r4epis.netlify.com/welcome
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
@@ -57,15 +65,19 @@ For help installing packages, please visit https://r4epis.netlify.com/welcome
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 ## Installing required packages for this template
-required_packages <- c("here",       # define pathways to files
+required_packages <- c("knitr",   # for cleaner tables
+                       "remotes", # for installing packages from github
+                       "here",       # define pathways to files
                        "rio",     # import datasets
                        "dplyr",   # clean/shape data
                        "tidyr",   # clean/shape data
                        "stringr", # clean text 
                        "purrr",   # looping over multiple datasets in a list
                        "aweek",   # converting between epiweeks and dates
-                       "knitr",   # for cleaner tables
-                       "epichecks" # for WHO IDSR functions
+                       "sf",      # for reading and plotting maps 
+                       "ggspatial", # for adding a scalebar to maps
+                       "ggplot2",  # for plotting
+                       "forcats"  # for manipulating factors
                        )
 
 for (pkg in required_packages) {
@@ -76,7 +88,29 @@ for (pkg in required_packages) {
   
   ## load packages to this current session 
   library(pkg, character.only = TRUE)
+}
+
+
+## Installing required packages from github 
+git_packages <- c("epichecks", # for WHO IDSR functions
+                  "sitrep"     # for general field-epi functions
+                  )
+for (pkg in git_packages) {
+  ## install packages if not already present from approrpriate repo
+  if (!pkg %in% rownames(installed.packages()) & 
+      pkg == "epichecks") {
+    remotes::install_github("R4IDSR/epichecks")
   }
+  
+  if (!pkg %in% rownames(installed.packages()) & 
+      pkg == "sitrep") {
+    remotes::install_github("R4EPI/sitrep")     # for general field-epi functions
+  }
+  
+  ## load packages to this current session 
+  library(pkg, character.only = TRUE)
+}
+
 ```
 
 
@@ -149,6 +183,26 @@ processed_data_agg <- filter(processed_data_agg,
 ```
 
 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// read_shapefile \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will read in the AFRO shapefile which is stored in the epichecks 
+ package. This is used for mapping later on. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r read_shp}
+
+## get file path
+path <- system.file("extdata", "AFRO.shp", package = "epichecks")
+
+## read in shapefile 
+afro_shp <- read_sf(path)
+```
+
+
+
 # I- Introduction notes 
 The International Health Regulations (IHR), adopted in 2005, state that each 
 country shall strengthen and maintain the capacity to detect, assess, and respond
@@ -181,10 +235,238 @@ ongoing events in the WHO African region.
 
 
 # III- Disease Surveillance in the African region 
-  
-  
+
   
 ## III-1. Completeness and timeliness in reporting to the WHO African region 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// completeness \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ completeness of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r completeness}
+
+## Number of expected reports --------------------------------------------------
+
+## get expected reports as weeks in the period
+expected_reports <- length(levels(current_weeks))
+
+
+## Counts submitted reports ----------------------------------------------------
+
+## table of country reports by week 
+cntry_report_wk <- processed_data_agg %>%       # using processed data
+  tab_linelist(country, strata = epiweek) %>%   # get counts of reports
+  select(-contains("proportion"))               # drop proportion columns
+
+## Count countries submitting any ----------------------------------------------
+
+## get the number of countries with reports 
+## (just all the datasets available - have to have submitted to appear)
+num_cntry <- nrow(cntry_report_wk)
+
+## proportion of expected countries (47 in AFRO region)
+prop_cntry <- str_glue(
+  round(num_cntry / 47 * 100, digits = 0), 
+  "%")
+
+## Count countries submitting all ----------------------------------------------
+
+## get number of countries that submitted all four reports 
+## (all those more than zero - as even if was missings epiweek would still be there)
+num_cntry_full <- cntry_report_wk %>% 
+  filter_at(vars(contains("n")), all_vars(. != 0)) %>% 
+  nrow()
+
+## proportion of expected countries (47 in AFRO region)
+prop_cntry_full <- str_glue(
+  round(num_cntry_full / 47 * 100, digits = 0), 
+  "%")
+
+## Completeness in reporting by week -------------------------------------------
+
+## get number of countries that submitted reports by week 
+## summarise all columns with "n" in by counting those rows not zero
+num_cntry_full_wk <- cntry_report_wk %>% 
+  summarise_at(vars(contains("n")), ~sum(. != 0))
+
+## proportion of expected countries (47 in AFRO region)
+prop_cntry_full_wk <- round(num_cntry_full_wk / 47 * 100, digits = 0)
+
+## extract weeks from the titles
+week_subs <- str_sub(names(prop_cntry_full_wk), start = 6, end = 8)
+
+## paste bits together
+wkly_completeness <- str_glue("{prop_cntry_full_wk}% during {week_subs}") 
+
+## Completeness in data reported  ----------------------------------------------
+
+## table of country reports by week that were not missing 
+cntry_report_wk_miss <- processed_data_agg %>%  # using processed data
+  filter(is.na(miss_comment)) %>%               # only those not missing
+  tab_linelist(country, strata = epiweek) %>%   # get counts of reports
+  select(-contains("proportion"))               # drop proportion columns
+
+## total reports received in the time period
+## NOTE: USING ALL SUBMITTED REPORTS! 
+## (from countries report table where epiweek count is not zero)
+total_reports <- cntry_report_wk %>%            
+  summarise_at(vars(contains("n")), ~sum(. != 0)) %>% 
+  sum()
+
+## get counts of not missing reports (exclude those weeks with zeros)
+non_missings <- cntry_report_wk_miss %>% 
+  summarise_at(vars(contains("n")), ~sum(. != 0)) %>% 
+  sum()
+
+## get proportion of non_missing reports 
+non_missings_prop <- str_glue(
+  round(non_missings / total_reports * 100, digits = 0), 
+  "%")
+
+## get countries submitting at least one missing report 
+## (countries submitting minus countries without missings) 
+complete_countries <- num_cntry - 
+  cntry_report_wk_miss %>% 
+  filter_at(vars(contains("n")), all_vars(. != 0)) %>% 
+  nrow()
+
+## proportion of expected countries (47 in AFRO region)
+complete_countries_prop <- str_glue(
+  round(complete_countries / 47 * 100, digits = 0), 
+  "%")
+
+```
+
+  
+**Completeness** 
+
+* During `r str_glue("{current_month} {current_year}")` (
+`r str_glue("{start_week} to {end_week}")`)  `r num_cntry` of 47(`r prop_cntry`) 
+submitted at least one of the `r expected_reports` expected IDSR reports to
+WHO AFRO.
+* `r num_cntry_full` (`r prop_cntry_full` ) countries submitted all
+`r expected_reports` during the month
+* The weekly completeness was as follows, for respective weeks: `r wkly_completeness`
+* Among the `r total_reports` weekly reports received during the month, 
+`r non_missings`(`r non_missings_prop`) were complete (without any missing value)
+* `r complete_countries` countries of 47 (`r complete_countries_prop`) submitted
+at least one report with missing values. The WHO AFRO provided necessary feedback
+to MS on missing values for further verification. 
+
+**Figure 1**. Spatial distribution of countries by number of reports submitted 
+during `r str_glue("{current_month} {current_year}")`
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// completeness_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for reporting and completeness of IDSR data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r completeness_map, fig.width = 6*1.25, fig.height = 6}
+
+## Prepare data for plotting ---------------------------------------------------
+
+## get the total reports (n diseases*districts) per country
+## and proportion of expected reports for that month received by country
+completeness_data <- cntry_report_wk %>% 
+  mutate(
+    prop_reps = rowSums(select(., contains("n")) != 0) / 
+      expected_reports * 100, 
+    tot_reps = rowSums(select(., contains("n"))))
+
+## get the counts of reports missing data (n diseases*districts)    
+missing_data <- cntry_report_wk_miss %>% 
+  mutate(complete_reps = rowSums(select(., contains("n")))) %>% 
+  select(value, complete_reps) 
+
+## join two datasets
+completeness_data <- left_join(completeness_data, missing_data, by = "value")
+
+## drop extra columns 
+completeness_data <- completeness_data %>% 
+  select(value, prop_reps, tot_reps, complete_reps)
+
+
+## join data set to the shapefile for plotting 
+afro_shp <- left_join(afro_shp, completeness_data, by = c("country" = "value"))
+
+## recode NA to zero for AFRO countries 
+afro_shp <- afro_shp %>% 
+  mutate(prop_reps = if_else(is.na(prop_reps) &
+                                   WHO_REG == "AFRO", 0,
+                                 prop_reps))
+
+## define nice groups 
+## one group will be 0 only 
+## the remaining number of groups (defined by number of weeks)
+## are divided evenly to reach up to 100% 
+breakers <- as.integer(c(
+                         # include zero as a standalone group
+                         0, 
+                         # 1 to n divisions, snapping the boundaries to the nearest 100
+                         find_breaks(n = 100, breaks = 4, ceiling = TRUE)
+             ))
+
+## create a categorical variable using the age_categories function 
+## (we aren't using ages - but it functions the same way!)
+afro_shp <- afro_shp %>% 
+  mutate(prop_reps_cat = age_categories(prop_reps, breakers = breakers))
+
+## fix NA and 100+ category 
+afro_shp <- afro_shp %>% 
+  mutate(prop_reps_cat = fct_recode(prop_reps_cat, 
+                                    "0"   = "0-0",
+                                    "100" = "100+"))
+
+
+## plot map --------------------------------------------------------------------
+
+## start an empy plot 
+ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = prop_reps_cat), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_brewer(drop = FALSE, 
+                    palette = "Blues", 
+                    na.value = "grey60",
+                    labels = c(levels(afro_shp$prop_reps_cat), 
+                               "Non-AFRO"),
+                    name = "Reporting in month (%)") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = tot_reps, 
+                 geometry = geometry, 
+                 colour = "Total reports"),
+             stat = "sf_coordinates") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = complete_reps, 
+                 geometry = geometry, 
+                 colour = "Non-missing reports"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10), 
+                        name = "Number of reports") +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("Dark red", "Red"), 
+                      name = "Report type") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale() +
+  ## get rid of axes and extras
+  theme_void() 
+```
   
   
 ## III-2. Alert thresholds for diseases and conditions under surveillance 

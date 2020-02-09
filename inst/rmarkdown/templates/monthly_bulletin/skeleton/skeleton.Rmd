@@ -62,7 +62,16 @@ For help installing packages, please visit https://r4epis.netlify.com/welcome
 ```{r setup, include=FALSE}
 
 ## set the chunks of code to not show up in output
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = FALSE,       # hide all code chunks in output
+                      warning = FALSE,    # do not show warnings
+                      message = FALSE,    # do not show messages
+                      error = TRUE,       # show errors if they appear, but don't stop
+                      fig.width = 7*1.25, # Figure width
+                      fig.height = 7      # Figure height
+                      )
+
+## set default NA to -
+options(knitr.kable.NA = "-")
 
 ## Installing required packages for this template
 required_packages <- c("knitr",   # for cleaner tables
@@ -76,8 +85,10 @@ required_packages <- c("knitr",   # for cleaner tables
                        "aweek",   # converting between epiweeks and dates
                        "sf",      # for reading and plotting maps 
                        "ggspatial", # for adding a scalebar to maps
-                       "ggplot2",  # for plotting
-                       "forcats"  # for manipulating factors
+                       "ggplot2",   # for plotting
+                       "forcats",   # for manipulating factors
+                       "patchwork", # for combining plots
+                       "colorspace" # for choosing colour schemes
                        )
 
 for (pkg in required_packages) {
@@ -176,10 +187,18 @@ processed_data <- purrr::map(processed_data, threshold_checker)
 ## run aggregator function to pull together a merged dataset
 processed_data_agg <- aggregator(processed_data, output_path = NULL)
 
+## make sure that epiweek is an aweek class
+processed_data_agg <- processed_data_agg %>% 
+  mutate(epiweek = as.aweek(epiweek))
+
 ## filter for weeks of interest 
 processed_data_agg <- filter(processed_data_agg, 
                              epiweek >= start_week, 
                              epiweek <= end_week)
+
+## make sure all the levels of epiweek are represented in a factor 
+processed_data_agg <- processed_data_agg %>% 
+  mutate(epiweek = factor_aweek(epiweek))
 ```
 
 
@@ -202,6 +221,42 @@ afro_shp <- read_sf(path)
 ```
 
 
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// who_subregions \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will use the AFRO shapefile to categorise countries in to WHO
+ AFRO subregions. 
+ It also makes sure that the country and WHO_SUBREGION variables are factors 
+ so that all countries are represented (regardless if they report or not). 
+ This is important for showing zero-counts. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r who_subregions}
+
+## merge IDSR data and shapefile based on country
+## only keep country and WHO_SUBREG from the shapefile 
+processed_data_agg <- left_join(processed_data_agg, 
+                                 select(afro_shp, country, WHO_SUBREG), 
+                                by = "country") %>% 
+  select(-geometry) # drop shapefile geomtry from IDSR data
+
+
+## get full list of countries in AFRO by region
+region_countries <- afro_shp %>% 
+  filter(WHO_REG == "AFRO") %>%             # select only rows with AFRO
+  as_tibble() %>%                           # change class to tibble
+  select(country, WHO_SUBREG, -geometry)    # only keep country and reg, drop geometry
+
+
+## make sure variables are factors with appropriate levels
+processed_data_agg <- processed_data_agg %>% 
+  mutate(country = factor(country, 
+                          levels = region_countries$country), 
+         WHO_SUBREG = factor(WHO_SUBREG, 
+                             levels = unique(region_countries$WHO_SUBREG))
+         )
+```
 
 # I- Introduction notes 
 The International Health Regulations (IHR), adopted in 2005, state that each 
@@ -350,7 +405,8 @@ submitted at least one of the `r expected_reports` expected IDSR reports to
 WHO AFRO.
 * `r num_cntry_full` (`r prop_cntry_full` ) countries submitted all
 `r expected_reports` during the month
-* The weekly completeness was as follows, for respective weeks: `r wkly_completeness`
+* The weekly reporting completeness was as follows, for respective weeks:
+`r wkly_completeness`
 * Among the `r total_reports` weekly reports received during the month, 
 `r non_missings`(`r non_missings_prop`) were complete (without any missing value)
 * `r complete_countries` countries of 47 (`r complete_countries_prop`) submitted
@@ -367,7 +423,7 @@ during `r str_glue("{current_month} {current_year}")`
  This section plots a map for reporting and completeness of IDSR data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
-```{r completeness_map, fig.width = 6*1.25, fig.height = 6}
+```{r completeness_map}
 
 ## Prepare data for plotting ---------------------------------------------------
 
@@ -437,7 +493,7 @@ ggplot() +
   ## set the colours for choropleth
   ## set missings to grey and label them Non-AFRO
   scale_fill_brewer(drop = FALSE, 
-                    palette = "Blues", 
+                    palette = "Greens", 
                     na.value = "grey60",
                     labels = c(levels(afro_shp$prop_reps_cat), 
                                "Non-AFRO"),
@@ -458,18 +514,540 @@ ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("Dark red", "Red"), 
+  scale_colour_manual(values = c("Dark red", "#F7C252"), 
                       name = "Report type") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
   ## add a scale bar
   annotation_scale() +
   ## get rid of axes and extras
-  theme_void() 
+  theme_void(base_size = 18) + 
+  theme()
 ```
+
+
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// timeliness \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ timeliness of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r timeliness}
+
+## create timeliness variable --------------------------------------------------
+
+## set reporting deadline as the wednesday after week of interest (i.e. in week after)
+## function returns monday of current_week, add 9 days to that gives following Wed
+processed_data_agg <- processed_data_agg %>% 
+  mutate(report_deadline = week2date(epiweek) + 9)
+
+## fix the date submitted var
+## drop time from the variable by only keeping first 10 characters
+## change to date (the original input is day/month/year)
+processed_data_agg <- processed_data_agg %>% 
+  mutate(DataSubmissionDate = as.Date(
+    str_sub(DataSubmissionDate, 1, 10),
+    "%d/%m/%Y"))
+
+## Create a TRUE/FALSE variable for whether the report was submitted on time
+processed_data_agg <- processed_data_agg %>% 
+  mutate(on_time = DataSubmissionDate <= report_deadline)
+
+## overall timeliness ----------------------------------------------------------
+
+## get the theoretical number of reports 
+## AFRO countries * number of weeks
+theoretical_reports <- 47 * expected_reports
+
+## get counts of ontime and total reports by country and epiweek
+timely_report_wk <- processed_data_agg %>% 
+  group_by(country, epiweek) %>% 
+  summarise(not_late = sum(on_time),
+            reports = n())
+
+## get count of non-zero late rows and divide by theoretical reports
+num_timely_reports <- timely_report_wk %>% 
+  summarise(week_timely = sum(not_late != 0)) %>% 
+  summarise(sum(week_timely)) %>% 
+  pull()
+
+prop_timely_reports <- str_glue(
+  round(num_timely_reports / theoretical_reports * 100, digits = 0), 
+  "%")
+
+## weekly timeliness ----------------------------------------------------------
+
+## get the number of countries submitted on time by week 
+## and proportion of 47 AFRO countries
+wkly_num_timely_reports <- timely_report_wk %>% 
+  group_by(epiweek) %>% 
+  summarise(week_timely = sum(not_late != 0), 
+            prop_timely = round(week_timely / 47 * 100, 
+                                digits = 0)
+  )
+
+## paste bits together
+wkly_timeliness <- str_glue(
+  "{wkly_num_timely_reports$prop_timely}% during {week_subs}"
+  ) 
+
+```
+
+
+**Timeliness** 
+
+* During `r str_glue("{current_month} {current_year}")` among the 
+`r theoretical_reports` (47x`r expected_reports`), `r num_timely_reports` were 
+submitted on time giving an overall timeliness of `r prop_timely_reports`. 
+* The weekly timeliness was as follows, for respective weeks: `r wkly_timeliness`
+
+
+**Figure 2**. Distribution of completeness and timeliness for country reports
+by week, during `r str_glue("{current_month} {current_year}")` (N = 47)
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// reporting_plots \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a completeness and timeliness by week for reporting
+ of IDSR data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r reporting_plots}
+
+## Prepare data for plotting ---------------------------------------------------
+
+## fix counts of completeness 
+intermed_complete <- cntry_report_wk_miss %>% 
+  summarise_at(vars(contains("n")), ~sum(. != 0))
+
+intermed_complete_prop <- round(intermed_complete / 47 * 100, digits = 0)
+
+
+combo_reports <- wkly_num_timely_reports %>% 
+  ## add completeness as variables (change to numeric from df)
+  mutate(weekly_complete = as.numeric(intermed_complete), 
+         prop_complete = as.numeric(intermed_complete_prop)) %>% 
+  ## stack data to be used for plotting
+  pivot_longer(-epiweek, names_to = "variable", values_to = "value") %>% 
+  ## drop extra variables (rows in this case)
+  filter(variable %in% c("prop_timely", "prop_complete")) 
   
+## Plot bar chart --------------------------------------------------------------
+
+ggplot(combo_reports,
+       aes(x = epiweek, y = value, group = variable, fill = variable)) +
+  ## plot as bar, use the numbers as-is, put bars next to each other 
+  geom_bar(stat = "identity", position = "dodge") + 
+  ## choose colours and labels for variables
+  scale_fill_manual(values = c("Dark red", "#AEB6E5"), 
+                    labels = c("Complete", "On-time"), 
+                    name = "") + 
+  ## make the y axes meet at origin and go to 100
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Country reports (%)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+
+
+
+**Figure 3**. Distribution of completeness and timeliness for country reports
+by week, during `r str_glue("{current_month} {current_year}")`, by sub-region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// reporting_plots_subregion \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a completeness and timeliness by week for reporting
+ of IDSR data, for each subregion of WHO AFRO. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r reporting_plots_subregion, fig.width = 7*1.25, fig.height = 9}
+
+## Prepare data for plotting ---------------------------------------------------
+
+## get number of countries in each sub region from shapefile
+region_counts <- afro_shp %>% 
+  count(WHO_SUBREG) %>%  # count countries
+  as_tibble() %>%        # change class to tibble
+  select(-geometry)      # drop geometry
+
+## get the number of reports, missings and timeliness by country/region
+country_region_counts <- processed_data_agg %>% 
+  group_by(WHO_SUBREG, country, epiweek) %>% 
+  summarise(reports  = n(), 
+            complete = sum(is.na(miss_comment)), 
+            timely   = sum(on_time)) %>% 
+  complete(epiweek, fill = list(reports = 0, 
+                                complete = 0, 
+                                timely = 0))
+
+## summarise by region and week 
+region_summaries <- country_region_counts %>% 
+  group_by(WHO_SUBREG, epiweek) %>% 
+  summarise(weekly_complete = sum(complete > 0), 
+            weekly_timely = sum(timely > 0))
+
+## get the number of countries per region 
+region_summaries <- left_join(region_summaries, region_counts, 
+                              by = "WHO_SUBREG")
+
+## get proportions 
+region_summaries <- region_summaries %>% 
+  mutate(prop_complete = round(weekly_complete / n * 100, digits = 0), 
+         prop_timely = round(weekly_timely / n * 100, digits = 0)
+  )
+
+
+
+combo_reports <- region_summaries %>% 
+  select(WHO_SUBREG, epiweek, prop_complete, prop_timely) %>% 
+  ## stack data to be used for plotting
+  pivot_longer(-c(epiweek, WHO_SUBREG), names_to = "variable", values_to = "value") %>% 
+  ungroup() %>% 
+  mutate(WHO_SUBREG = factor(WHO_SUBREG,
+                             levels = c("Central", "North", "East", "Southern", "West")))
+
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(combo_reports,
+       aes(x = epiweek, y = value, group = variable, fill = variable)) +
+  ## plot as bar, use the numbers as-is, put bars next to each other 
+  geom_bar(stat = "identity", position = "dodge") + 
+  ## choose colours and labels for variables
+  scale_fill_manual(values = c("Dark red", "#AEB6E5"), 
+                    labels = c("Complete", "On-time"), 
+                    name = "") + 
+  ## add horizontal line at 0 for reference 
+  geom_hline(yintercept = 0) + 
+  ## make the y axes meet at origin and go to 100
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 100)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Country reports (%)") +
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), 
+        panel.spacing = unit(2, "lines")) +
+  facet_grid(WHO_SUBREG~.)
+
+```
+
+
+**Alternative**: Tile plot showing number of country reports by completeness 
+(non-missings) and timeliness for each week
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// tile_plot \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This is a suggested alternative way of presenting the data. 
+ This section plots a tile plot showing the reporting status of each country
+ by week. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r tile_plot, fig.width = 9*1.25, fig.height = 12}
+## tile plot 
+
+## categorise reporting statuses
+cats_fix <- country_region_counts %>% 
+  mutate(categories = case_when(
+    reports == 0       ~ "Not submitted", 
+    reports != 0 &
+      complete == 0 & 
+      timely == 0      ~  "Incomplete & Late", 
+    reports != 0 & 
+      complete != 0 & 
+      timely == 0      ~  "Complete & Late", 
+    reports != 0 &
+      complete == 0 & 
+      timely !=  0     ~  "Incomplete & ontime", 
+    reports != 0 &
+      complete != 0 & 
+      timely != 0      ~  "Complete & ontime"), 
+    categories = factor(categories, 
+                        levels = c("Complete & ontime", 
+                                   "Incomplete & ontime",
+                                   "Complete & Late",
+                                   "Incomplete & Late",
+                                   "Not submitted"))
+  ) %>% 
+  ungroup() %>% 
+  select(-WHO_SUBREG)
+
+## join to rest of afro countries 
+tile_counts <- left_join(region_countries, cats_fix, 
+                         by = "country") %>% 
+  mutate(epiweek = fct_explicit_na(epiweek, levels(current_weeks)[1])) %>% 
+  complete(country, epiweek, fill = list(reports = 0, 
+                                complete = 0, 
+                                timely = 0, 
+                                categories = "Not submitted")) %>% 
+  fill(WHO_SUBREG)
+
+
+ggplot(tile_counts, aes(x = epiweek, y = country, fill = categories)) + 
+  geom_tile(colour = "white", size = 0.25) + 
+  # facet_grid(WHO_SUBREG~., scales = "free_y", space = "free") +
+  scale_y_discrete(expand = c(0,0), limits = rev(unique(tile_counts$country))) + 
+  scale_fill_manual(values = c("#006027", "#abdda4", "#e6f598", "#f46d43", "#d53e4f")) + 
+  coord_fixed(ratio = 1) +
+  ## change axis labels
+  labs(x = "Calendar week") +
+  theme_minimal(base_size = 18) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1), 
+        legend.title = element_blank())
+
+```
+
+
+**Alternative**: Bivariate map showing number of country reports by completeness 
+(non-missings) and timeliness. 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// bivariate_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This is a suggested alternative way of presenting the data. 
+ This section plots a bivariate map - a choropleth which is coloured depending 
+ on whether countries submitted data complete and/or ontime. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+```{r bivariate_map}
+## bivariate map 
+
+## define function for bivariate colours
+make_colours <- function(og_pal1 = "OrRd" , og_pal2 = "Blues", num = 5) {
+  
+  ## get colour palettes 
+  sequence1 <- colorspace::sequential_hcl(num, palette = og_pal1)
+  sequence2 <- colorspace::sequential_hcl(num, palette = og_pal2)
+
+  ## convert darkest colours to RGB
+  deepest <- hex2RGB(c(sequence1[1], sequence2[2]))
+  
+  ## mix two colours to get the top right colour
+  mix_deep <- hex( 
+    mixcolor(0.5, 
+             deepest[1], deepest[2]
+             )
+    )
+  
+  ## create an empty list for sequences 
+  output <- list() 
+  
+  ## fill initial two sequences 
+  output[[1]] <- sequence1
+  output[[num]] <- sequence2
+  
+  ## get sequences for either side of square
+  palette <- colorRampPalette(colors = c(mix_deep, sequence1[1]))
+  output[[num + 1]] <- palette(num)
+  palette <- colorRampPalette(colors = c(mix_deep, sequence2[1]))
+  output[[num + 2]] <- palette(num)
+  
+  ## get the inbetweens going upwards between sequence 2 and newly created top outter line
+   for (i in 2:(num - 1)) {
+    palette <- colorRampPalette(colors = c(output[[num + 1]][i], output[[num]][i]))
+    output[[i]] <- palette(num)
+   }
+  
+  
+  simpler <- matrix(NA, nrow = num, ncol = num)
+  simpler[ , 1] <- rev(output[[1]])
+  simpler[1, 2:num] <- rev(output[[num]][1:(num - 1)])
+  simpler[2:num, num] <- rev(output[[num + 2]][1:(num - 1)])
+  
+  inbetweeners <- c(2:(num - 1))
+  
+  for (i in 1:length(inbetweeners)) {
+    mat_num <- inbetweeners[i]
+    list_num <- rev(inbetweeners)[i]
+    
+    simpler[2:num , mat_num] <- rev(output[[list_num]][1:(num - 1)])
+  }
+  
+  
+  
+  structured <- expand.grid(
+    data.frame(rws = 1:num, cls = 1:num, clrs = NA)
+  )
+  
+  for (i in 1:nrow(structured)) {
+    structured[i, "clrs"] <- simpler[structured$rws[i], structured$cls[i]]
+  }
+  
+  ## return list with colours 
+  # output
+  
+  ## return dataframe with colours
+  structured 
+  
+}
+
+## define your colour palette  
+cols2 <- make_colours(num = expected_reports + 1)
+
+
+cols2 <- cols2 %>% 
+  mutate_at(.vars = c("rws", "cls"), 
+            .funs = funs(. - 1))
+
+cols2 <- cols2 %>% 
+  mutate(merger = str_glue("{rws}-{cls}")) 
+
+map_counts <- country_region_counts %>% 
+  group_by(country) %>% 
+  summarise(complete = sum(complete > 0), 
+            timely = sum(timely > 0), 
+            merger = str_glue("{complete}-{timely}")) 
+
+
+map_counts <- left_join(map_counts, cols2, by = "merger")
+
+
+afro_shp <- left_join(afro_shp, map_counts, by = "country")
+
+
+afro_shp <- afro_shp %>% 
+  mutate(clrs = fct_explicit_na(clrs, na_level = "Grey90"))
+
+base_map <- ggplot(data = afro_shp) + 
+  geom_sf(aes(fill = clrs), 
+          color = "black", 
+          size = 0.1) + 
+  scale_fill_identity(drop = FALSE, 
+          na.value = "grey60") + 
+  ## add a scale bar
+  annotation_scale() +
+  ## get rid of axes and extras
+  theme_void(base_size = 18) 
+
+legend <- ggplot(
+    data = cols2,
+    mapping = aes(
+      x = cls,
+      y = rws,
+      fill = clrs)) +
+  geom_tile() +
+  scale_fill_identity() + 
+  scale_x_continuous(breaks = c(0:6)) +
+  scale_y_continuous(breaks = c(0:6)) +
+  coord_fixed() + 
+  labs(x = "Timely (n)", y = "Complete (n)") + 
+  theme_minimal(base_size = 18)
+
+layout <- c(
+  area(t = 1, l = 1, b = 10, r = 10),
+  area(t = 7, l = 2, b = 8, r = 3)
+)
+
+base_map + legend + plot_layout(design = layout)
+
+```
+
+
   
 ## III-2. Alert thresholds for diseases and conditions under surveillance 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// thresholds \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ threshold analysis of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->  
+
+```{r thresholds}
+
+## get diseases, countries and associated cases/deaths for alerts
+threshold_counts <- processed_data_agg %>% 
+  group_by(epiweek, country, disease) %>% 
+  filter(alert == "Flag") %>% 
+  summarise(cases = sum(number_of_cases, na.rm = TRUE), 
+            deaths = sum(number_of_deaths, na.rm = TRUE), 
+            CFR = round(cases/deaths, digits = 1), 
+            "Verification status" = NA) %>% 
+  ungroup()
+
+## get the number of unique diseases passing threshold
+treshold_disease_counts <- threshold_counts %>% 
+  summarise(n_distinct(disease))
+
+## get the number of countries with threshold alerts 
+threshold_country_counts <- threshold_counts %>% 
+  summarise(n_distinct(country))
+
+```
+
+Except for outbreaks reported to WHO before the period covered by the current
+bulletin, the alert thresholds were triggered during 
+`r str_glue("{current_month} {current_year}")` for `r treshold_disease_counts`
+diseases or conditions in `r threshold_country_counts` countries. 
+Tables 1 to `r expected_reports` present the distribution of diseases and 
+conditions that triggered alert thresholds by country and by week.
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// thresholds_weeks \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ threshold analysis of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r thresholds_weeks, results='asis'}
+
+## fix the infinities 
+threshold_counts <- threshold_counts %>% 
+  mutate(CFR = na_if(CFR, Inf))
+
+
+## loop over each of epiweeks of interest, output a title and table for each
+for (i in 1:length(levels(current_weeks))) {
+  
+  ## pull togther a title (wrap in stars for bold)
+  print(str_glue("**Table {i}: Diseases and conditions that triggered alert thresholds 
+           during week {levels(current_weeks)[i]}**"))
+  
+  ## filter for correct epiweek then choose columns of interest
+  print(
+    threshold_counts %>% 
+    filter(epiweek == levels(current_weeks)[{{i}}]) %>% 
+    select(
+      Disease = disease,
+      Country = country, 
+      Cases = cases, 
+      Deaths = deaths, 
+      CFR, 
+      "Verification status") %>% 
+    kable()
+    )
+  
+  cat('\n') ## seperate the tables (otherwise merged by word)
+}
+
+```
+
+
+A total of [x] alerts thresholds were confirmed as outbreaks as result of 
+investigations ([x])%, [x] were discarded following verification and 
+investigation ([x]%) and [x] are still under verification ([x]). 
+Figure 4 shows the spatial distribution of diseases and conditions that 
+triggered alert thresholds by country and verification status. 
+
+**Figure 4:** Spatial distribution of diseases and conditions that triggered alert 
+thresholds by country and verification status in the African region
   
   
 # IV- Ongoing outbreaks and other health emergencies in the region 

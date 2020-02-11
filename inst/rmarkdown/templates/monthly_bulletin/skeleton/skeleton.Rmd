@@ -81,6 +81,7 @@ required_packages <- c("knitr",   # for cleaner tables
                        "dplyr",   # clean/shape data
                        "tidyr",   # clean/shape data
                        "stringr", # clean text 
+                       "epitrix", # for fixing variable names
                        "purrr",   # looping over multiple datasets in a list
                        "aweek",   # converting between epiweeks and dates
                        "sf",      # for reading and plotting maps 
@@ -88,7 +89,8 @@ required_packages <- c("knitr",   # for cleaner tables
                        "ggplot2",   # for plotting
                        "forcats",   # for manipulating factors
                        "patchwork", # for combining plots
-                       "colorspace" # for choosing colour schemes
+                       "colorspace", # for choosing colour schemes
+                       "matchmaker" # for recoding variables based on a dictionary
                        )
 
 for (pkg in required_packages) {
@@ -104,18 +106,27 @@ for (pkg in required_packages) {
 
 ## Installing required packages from github 
 git_packages <- c("epichecks", # for WHO IDSR functions
-                  "sitrep"     # for general field-epi functions
+                  "sitrep",    # for general field-epi functions
+                  "linelist"   # for cleaning date variables
                   )
 for (pkg in git_packages) {
-  ## install packages if not already present from approrpriate repo
-  if (!pkg %in% rownames(installed.packages()) & 
-      pkg == "epichecks") {
-    remotes::install_github("R4IDSR/epichecks")
-  }
   
-  if (!pkg %in% rownames(installed.packages()) & 
-      pkg == "sitrep") {
-    remotes::install_github("R4EPI/sitrep")     # for general field-epi functions
+  ## install packages if not already present from approrpriate repo
+  if (!pkg %in% rownames(installed.packages())) {
+    
+    if (pkg == "epichecks") {
+      remotes::install_github("R4IDSR/epichecks")
+    }
+    
+    if (pkg == "sitrep") {
+      remotes::install_github("R4EPI/sitrep") 
+    }
+    
+    if (pkg == "linelist") {
+      remotes::install_github("reconhub/linelist")
+    }
+      
+    
   }
   
   ## load packages to this current session 
@@ -127,15 +138,15 @@ for (pkg in git_packages) {
 
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// read_data \\\
+/// read_IDSR_data \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
  This section will read in the all csv files placed in folders for the weeks of 
  interest. 
- It will then do some data cleaning and simplify the names of datasets. 
+ It will then do some data cleaning and simplify the names of IDSR datasets. 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
-```{r read_data}
+```{r read_IDSR_data}
 
 ## file path where IDSR processed data is
 input_path <- here::here("Data", "Processed")
@@ -149,7 +160,7 @@ processed_data <- import_list(file_paths, rbind = FALSE, na = "NULL")
 
 
 ## apply cleaning steps to each country dataset in list
-processed_data <- purrr::map(processed_data, clean_data)
+processed_data <- purrr::map(processed_data, epichecks::clean_data)
 
 ## pull country name from first row of country variable
 cleaned_names <- purrr::map_chr(purrr::map(processed_data, "country"), 1L)
@@ -214,10 +225,10 @@ processed_data_agg <- processed_data_agg %>%
 ```{r read_shp}
 
 ## get file path
-path <- system.file("extdata", "AFRO.shp", package = "epichecks")
+shp_path <- system.file("extdata", "AFRO.shp", package = "epichecks")
 
 ## read in shapefile 
-afro_shp <- read_sf(path)
+afro_shp <- read_sf(shp_path)
 ```
 
 
@@ -257,6 +268,124 @@ processed_data_agg <- processed_data_agg %>%
                              levels = unique(region_countries$WHO_SUBREG))
          )
 ```
+
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// read_PHE_data \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will read in the PHE monitoring sheet in the designated excel. 
+ It will clean necessary columns and filter for ongoing or closed events from 
+ the weeks of interest. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r read_PHE_data}
+
+## file path where PHE data is
+input_path_phe <- here::here("Data", "2017_2019_PHE_31_10_2019.xlsx") 
+
+
+## import the monitoring sheet from the excel file
+phe_data <- import(input_path_phe, na = c("-", "n/a"))
+
+## define clean variable names using clean_labels from the epitrix package
+cleaned_colnames <- epitrix::clean_labels(colnames(phe_data))
+
+## overwrite variable names with defined clean names
+colnames(phe_data) <- cleaned_colnames
+
+
+
+
+## drop the end of outbreak date variable as if all empty cannot fix dates
+## (should be fixed by the newer version of linelist)
+# phe_data <- phe_data %>% 
+#   select(-end_of_outbreak_date)
+
+## use the guess_dates() function to make a first pass at date variables.
+phe_data <- phe_data %>%
+  mutate_at(vars(matches("date|Date|reporting_period")), linelist::guess_dates,
+            error_tolerance = 0.5)
+
+## clean up the week variables 
+phe_data <- phe_data %>% 
+  mutate_at(.vars = c("week_notified_to_who", "week_event_closed"), # choose both vars
+            .funs = function(x) {  # define a function to run over each var
+               # replace 0 with NA
+              x <- na_if(x, "0")  
+              
+              ## where x is not NA, piece together year and week with -W inbetween
+              x[!is.na(x)] <- str_glue(
+                "{str_sub(x[!is.na(x)], 1, 4)}-W{str_sub(x[!is.na(x)] , 6, 7)}")
+              
+              ## change in to an a week 
+              x <- as.aweek(x)
+              
+              ## return variable
+              x
+            }
+  )
+  
+
+## clean status variable to make sure all spelt correctly
+phe_data <- phe_data %>% 
+  mutate(status = recode(status, 
+                         "closed" = "Closed"))
+
+
+## create a reporting delay variable
+phe_data <- phe_data %>% 
+  mutate(reporting_delay = as.numeric(date_notified_to_who - date_of_onset))
+
+
+## create factor levels for grade variable
+phe_data <- phe_data %>% 
+  mutate(grade = factor(grade, levels = c("Ungraded", 
+                                          "Grade 1", 
+                                          "Grade 2", 
+                                          "Grade 3", 
+                                          "Protracted 1", 
+                                          "Protracted 2", 
+                                          "Protracted 3")))
+
+
+## filter to have relevant rows 
+## All those which are substantiated AND
+## EITHER ongoing OR
+## closed during the current weeks of interest
+phe_data <- phe_data %>% 
+  filter(!is.na(country) & 
+           designation == "Substantiated" & 
+           (status == "Ongoing" | 
+           (status == "Closed" & 
+              week_event_closed %in% levels(current_weeks))))
+
+
+## clean the country names -----------------------------------------------------
+
+## get excel file path for disease dictionary
+country_path <- system.file("extdata", "country_dictionary.xlsx", package = "epichecks")
+
+## read in the country dictionary from internal package folder
+country_dict <- import(country_path)
+
+## recode countries names based on dictionary
+phe_data$country <- matchmaker::match_vec(phe_data$country,
+                                     dictionary = country_dict,
+                                     from = "Alias", 
+                                     to = "AdministrativeLevelName")
+
+## Fix tanzania and DRc (INTERM SOLUTION UNTIL TAMAYI FIXES DICTIONARY)
+phe_data$country[phe_data$country == "DR Congo"] <- "Democratic Republic of the Congo"
+phe_data$country[phe_data$country == "UR Tanzania"] <- "Tanzania (Mainland)"
+
+
+## drop country dict again to save memory 
+rm(country_dict)
+```
+
+
 
 # I- Introduction notes 
 The International Health Regulations (IHR), adopted in 2005, state that each 
@@ -1051,11 +1180,318 @@ thresholds by country and verification status in the African region
   
   
 # IV- Ongoing outbreaks and other health emergencies in the region 
-  
-  
+
 ## IV-1. Overview of ongoing events 
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// ongoing_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ reporting events that are occuring based on PHE data.  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r ongoing_events}
+
+## New events notified ---------------------------------------------------------
+
+## get new events and countries in month
+new_events <- phe_data %>% 
+  filter(week_notified_to_who %in% levels(current_weeks))
+
+## get number of new events
+count_new_events <- nrow(new_events)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_new_events == 0) {
+  events_list <- ""
+}
+
+if (count_new_events != 0) {
+  events_list <- c("These included", 
+                   str_glue(", {new_events$event} in {new_events$country}"), 
+                   "."
+  )
+}
+
+## Closed events  --------------------------------------------------------------
+
+## get closed events and countries in month
+closed_events <- phe_data %>% 
+  filter(week_event_closed %in% levels(current_weeks))
+
+## get number of closed events
+count_closed_events <- nrow(closed_events)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_closed_events == 0) {
+  closed_events_list <- ""
+}
+
+if (count_closed_events != 0) {
+  closed_events_list <- c("These included", 
+                   str_glue(", {closed_events$event} in {closed_events$country} (notified on {closed_events$date_notified_to_who})"), 
+                   "."
+  )
+}
+
+## Ongoing events  -------------------------------------------------------------
+
+## get ongoing events and countries in month
+ongoing_events <- phe_data %>% 
+  filter(status == "Ongoing")
+
+## get number of ongoing events
+count_ongoing_events <- nrow(ongoing_events)
+
+## get number of ongoing event types
+count_ongoing_events_types <- length(unique(ongoing_events$event))
+
+## leading causes of events 
+## get counts to plot later
+top_ongoing_events_base <- ongoing_events %>% 
+  tab_linelist(event) %>% 
+  arrange(desc(n))  # sort based on decreasing counts
+
+## pull the top 5 events
+top_ongoing_events <- top_ongoing_events_base %>%  
+  mutate(proportion = round(proportion, digits = 0)) %>% 
+  top_n(5)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_ongoing_events == 0) {
+  top_events_list <- ""
+}
+
+if (count_ongoing_events != 0) {
+  top_events_list <- c("The leading causes of events were", 
+                   str_glue(" {top_ongoing_events$value} ({top_ongoing_events$n} events {top_ongoing_events$proportion}%)"), 
+                   "."
+  )
+}
+
+## top countries with events happening 
+top_ongoing_events_countries <- ongoing_events %>% 
+  tab_linelist(country) %>% 
+  arrange(desc(n)) %>%   # sort based on decreasing counts
+  mutate(proportion = round(proportion, digits = 0)) %>% 
+  top_n(5)
+
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_ongoing_events == 0) {
+  top_countries_list <- ""
+}
+
+if (count_ongoing_events != 0) {
+  top_countries_list <- c("The top five countries in terms of number of ongoing public health events were", 
+                   str_glue(" {top_ongoing_events_countries$value} ({top_ongoing_events_countries$n} events {top_ongoing_events_countries$proportion}%)"), 
+                   ".", 
+                   str_glue(" Indeed, {sum(top_ongoing_events_countries$proportion)}% of public health events are occuring in the top 5 countries.")
+  )
+}
+
+## reporting delay -------------------------------------------------------------
+
+median_report_delay <- summary(ongoing_events$reporting_delay, na.rm = TRUE)
+
+```
+  
+
+During `r str_glue("{current_month} {current_year}")`, `r count_new_events` new
+events were reported to WHO by the African region Member States. `r events_list`
+
+A total of `r count_closed_events` events were closed during 
+`r str_glue("{current_month} {current_year}")`. `r closed_events_list`  
+
+The total number of ongoing public health events in the WHO AFRO as of the 
+`r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")` was `r count_ongoing_events`, 
+representing `r count_ongoing_events_types` types of events. `r top_events_list`  
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// events_plot \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section creates a histogram plot of the ongoing events in the region.  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r events_plot}
+## plot with counts data 
+ggplot(top_ongoing_events_base) + 
+  ## plot a bar and reorder events based on the counts (use counts as they are)
+  geom_bar(aes(x = reorder(value, n), y = n), stat = "identity", fill = "red") + 
+  ## flip x and y axes 
+  coord_flip() + 
+  ## make the y axes meet at origin 
+  scale_y_continuous(expand = c(0,0)) + 
+  ## change axis labels
+  labs(y = "Number of reports (n)", x = "Events") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18)
+```
   
   
+`r top_countries_list`
+
+The Median delay between the onset of the first/index case and the reporting to 
+WHO for all the ongoing events, with dates available, was `r median_report_delay["Median"]`, 
+ranging from `r median_report_delay["Min."]` to `r median_report_delay["Max."]`. 
+
+**Table `r expected_reports + 1`**: Grading of currently ongoing public health 
+events in the African region. 
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// grading \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section creates a table of counts and porportions for grading of ongoing
+ events.  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r grading}
+ongoing_events %>% 
+  ## get table with counts and props
+  tab_linelist(grade) %>%
+  ## select columns and rename appropriately (New = old)
+  select("Grade" = value, 
+         "Counts" = n, 
+         "%" = proportion) %>% 
+  ## make in to nice table and set number of digits
+  kable(digits = 1)
+
+```  
+  
+  
+**Figure 6**: Spatial distribution of ongoing public health events in the African
+region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`  
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// grading_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section creates a map with cases and deaths dots, and a choropleth based on 
+ the highest grading for each country. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r grading_map}
+
+## Prepare data for plotting ---------------------------------------------------
+
+## using only on-going events
+top_grade <- ongoing_events %>% 
+  ## group by country
+  group_by(country) %>% 
+  ## create an integer out of factor variable for choosing highest
+  mutate(numeric_grade = as.integer(grade)) %>% 
+  ## choose the highest graded report for each country
+  top_n(1, numeric_grade) %>% 
+  ## for those with multiple highest grade, choose that with highest total cases
+  ## if there is still a tie then pick one at random
+  mutate(highest_cases = rank(-total_cases, ties.method = "random")) %>% 
+  ## choose rows selected above
+  filter(highest_cases == 1) %>% 
+  ## select variables need for plotting 
+  select(country, total_cases, deaths, grade)
+
+## join counts to map 
+afro_shp <- left_join(afro_shp, top_grade, by = "country")
+
+## fill in missing grading and non AFRO MS 
+afro_shp <- afro_shp %>% 
+  mutate(grade = if_else(is.na(grade) &
+                                   WHO_REG == "AFRO", 
+                         "No reported events",
+                         as.character(grade)), 
+         grade = factor(grade, levels = c("Ungraded", 
+                                          "No reported events",
+                                          "Grade 1", 
+                                          "Grade 2", 
+                                          "Grade 3", 
+                                          "Protracted 1", 
+                                          "Protracted 2", 
+                                          "Protracted 3")))
+  
+
+## create categorical variables for dots 
+
+afro_shp$total_cases <- cut(afro_shp$total_cases, 
+    breaks = c(0, 100, 1000, 10000, Inf), 
+    labels = c(1, 
+               2, 
+               3, 
+               4))
+
+afro_shp$deaths <- cut(afro_shp$deaths, 
+    breaks = c(0, 100, 1000, 10000, Inf), 
+    labels = c(1, 
+               2, 
+               3, 
+               4))
+
+
+## Plot map --------------------------------------------------------------------
+
+## start an empy plot 
+ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = grade), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_manual(drop = FALSE, 
+                    values = c("Grey60", 
+                               "#cfdcb3",          ## light green 
+                               "#f6f09e",          ## light yellow
+                               "#f0c180",          ## light orange
+                               "#eca39b",          ## light red 
+                               "#f3e600",          ## dark yellow
+                               "#e59701",          ## dark orange
+                               "#e73f11"),         ## dark red
+                    na.value = "grey90",
+                    labels = c(levels(afro_shp$grade), 
+                                      "Non-AFRO"),
+                    name = "Highest grade") + 
+  ## plot dots for total cases - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = as.integer(total_cases), 
+                 geometry = geometry, 
+                 colour = "Total cases"),
+             stat = "sf_coordinates") +
+  ## plot dots for deaths - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = as.integer(deaths), 
+                 geometry = geometry, 
+                 colour = "Deaths"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10),
+                        name = "Number", 
+                      labels = c("1-100",
+                                 "101-1000", 
+                                 "1001-10000", 
+                                 "10001+") ) +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("#00366C", "#79ABE2"), 
+                      name = "Measure") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale(location = "br") +
+  ## get rid of axes and extras
+  theme_void(base_size = 18) 
+
+```
+
+
+
+
 ## IV-2. Cholera outbreaks in the region 
   
   

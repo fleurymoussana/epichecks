@@ -15,14 +15,28 @@ URL: https://github.com/R4IDSR/epichecks
 Depends: R (>= 3.2)
 Imports: 
     aweek (>= 1.0.0), 
+    colorspace, 
     dplyr (>= 0.8.0),
+    epitrix, 
+    forcats, 
+    ggplot2 (>= 3.0.0), 
+    ggspatial, 
     here,
+    knitr, 
     matchmaker, 
+    patchwork, 
     purrr, 
+    remotes,
     rio, 
+    rlang (>= 0.4.0),
     rmarkdown, 
-    stringr, 
+    stringr,
+    sf, 
     tidyr (>= 1.0.0)
+Remotes: 
+    R4EPI/sitrep, 
+    reconhub/linelist
 Encoding: UTF-8
 LazyData: true
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.0.2

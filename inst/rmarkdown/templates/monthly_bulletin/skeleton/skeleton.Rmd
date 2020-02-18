@@ -74,23 +74,23 @@ knitr::opts_chunk$set(echo = FALSE,       # hide all code chunks in output
 options(knitr.kable.NA = "-")
 
 ## Installing required packages for this template
-required_packages <- c("knitr",   # for cleaner tables
-                       "remotes", # for installing packages from github
-                       "here",       # define pathways to files
-                       "rio",     # import datasets
-                       "dplyr",   # clean/shape data
-                       "tidyr",   # clean/shape data
-                       "stringr", # clean text 
-                       "epitrix", # for fixing variable names
-                       "purrr",   # looping over multiple datasets in a list
-                       "aweek",   # converting between epiweeks and dates
-                       "sf",      # for reading and plotting maps 
-                       "ggspatial", # for adding a scalebar to maps
-                       "ggplot2",   # for plotting
-                       "forcats",   # for manipulating factors
-                       "patchwork", # for combining plots
+required_packages <- c("aweek",      # converting between epiweeks and dates
                        "colorspace", # for choosing colour schemes
-                       "matchmaker" # for recoding variables based on a dictionary
+                       "dplyr",      # clean/shape data
+                       "epitrix",    # for fixing variable names
+                       "forcats",    # for manipulating factors
+                       "ggplot2",    # for plotting
+                       "ggspatial",  # for adding a scalebar to maps
+                       "here",       # define pathways to files
+                       "knitr",      # for cleaner tables
+                       "matchmaker", # for recoding variables based on a dictionar
+                       "patchwork",  # for combining plots
+                       "purrr",      # looping over multiple datasets in a list
+                       "remotes",    # for installing packages from github
+                       "rio",        # import datasets
+                       "stringr",    # clean text 
+                       "sf",         # for reading and plotting maps 
+                       "tidyr"       # clean/shape data
                        )
 
 for (pkg in required_packages) {
@@ -105,9 +105,9 @@ for (pkg in required_packages) {
 
 
 ## Installing required packages from github 
-git_packages <- c("epichecks", # for WHO IDSR functions
-                  "sitrep",    # for general field-epi functions
-                  "linelist"   # for cleaning date variables
+git_packages <- c("epichecks",  # for WHO IDSR functions
+                  "linelist",   # for cleaning date variables
+                  "sitrep"      # for general field-epi functions
                   )
 for (pkg in git_packages) {
   

@@ -1,12 +1,42 @@
-Package: epichecks
 Type: Package
-Title: What the Package Does (Title Case)
+Package: epichecks
+Title: Report templates and helper functions for WHO surveillance data
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Authors@R: 
+    c(person(given = "Alex",
+             family = "Spina",
+             role = c("aut", "cre"),
+             email = "alexfspina@gmail.com"))
+Description: Package for validating IDSR data (check missings and threshold flags),
+    produce weekly data summary and template for monthly bulletin.
+License: GPL-3
+BugReports: https://github.com/R4IDSR/epichecks/issues
+URL: https://github.com/R4IDSR/epichecks 
+Depends: R (>= 3.2)
+Imports: 
+    aweek (>= 1.0.0), 
+    colorspace, 
+    dplyr (>= 0.8.0),
+    epitrix, 
+    forcats, 
+    ggplot2 (>= 3.0.0), 
+    ggspatial, 
+    here,
+    knitr, 
+    matchmaker, 
+    patchwork, 
+    purrr, 
+    remotes,
+    rio, 
+    rlang (>= 0.4.0),
+    rmarkdown, 
+    stringr,
+    sf, 
+    tidyr (>= 1.0.0)
+Remotes: 
+    R4EPI/sitrep, 
+    reconhub/linelist
 Encoding: UTF-8
 LazyData: true
+Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.0.2

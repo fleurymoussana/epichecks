@@ -416,6 +416,10 @@ outbreak_data <- outbreak_data %>%
 outbreak_data <- outbreak_data %>% 
   filter(epiweek %in% levels(current_weeks))
 
+## turn epiweek in to a factor including all weeks of interest
+outbreak_data <- outbreak_data %>% 
+  mutate(epiweek = factor(epiweek, levels = levels(current_weeks)))
+
 ## recode countries names based on dictionary
 outbreak_data$country <- matchmaker::match_vec(outbreak_data$country,
                                      dictionary = country_dict,
@@ -663,7 +667,7 @@ ggplot() +
           col = "grey80") + 
   ## set the colours for choropleth
   ## set missings to grey and label them Non-AFRO
-  scale_fill_brewer(drop = FALSE, 
+  scale_fill_discrete_sequential(drop = FALSE, 
                     palette = "Greens", 
                     na.value = "grey60",
                     labels = c(levels(afro_shp$prop_reps_cat), 
@@ -690,7 +694,7 @@ ggplot() +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
   ## add a scale bar
-  annotation_scale() +
+  annotation_scale(location = "br") +
   ## get rid of axes and extras
   theme_void(base_size = 18) + 
   theme()
@@ -1101,7 +1105,7 @@ base_map <- ggplot(data = afro_shp) +
   scale_fill_identity(drop = FALSE, 
           na.value = "grey60") + 
   ## add a scale bar
-  annotation_scale() +
+  annotation_scale(location = "br") +
   ## get rid of axes and extras
   theme_void(base_size = 18) 
 
@@ -1574,13 +1578,17 @@ cholera_counts <- cholera_outbreak_data %>%
 
 Among the `r count_ongoing_events` ongoing events in the African region, 
 `r fmt_count(ongoing_events, event == "Cholera")` are due to cholera outbreaks. 
-`r length(unique(cholera_outbreak_data$countries))` countries 
+`r length(unique(cholera_outbreak_data$country))` countries 
 are experiencing a cholera outbreak: `r cholera_countries`. 
 
 During `r str_glue("{current_month} {current_year}")`, 
 `r cholera_counts$cases_total` cases have been reported 
 (`r cholera_counts$cases_susp_prob` and `r cholera_counts$cases_conf`) including
 `r cholera_counts$deaths` (case fatality ratio : `r cholera_counts$CFR`%). 
+
+**Figure 7**: Distribution of cases and CFR by week for 
+`r length(unique(cholera_outbreak_data$country))` countries experiencing a 
+cholera outbreak in the African region
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// cholera_plot_overall \\\
@@ -1600,17 +1608,36 @@ cholera_weekly <- cholera_outbreak_data %>%
               sum(new_confirmed_cases, na.rm = TRUE),
             deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
               sum(new_deaths_confirmed_cases, na.rm = TRUE), 
-            CFR = round(deaths / cases_total * 100, digits = 1))
-
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0)) %>% 
+  mutate(cfr_cat = cut(CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+")))
 
 ## Plot bar charts -------------------------------------------------------------
 
-ggplot(cholera_weekly, aes(x = as.character(epiweek), y = cases_total, fill = CFR)) + 
-  geom_bar(stat = "identity")
-
+ggplot(cholera_weekly, aes(x = epiweek, y = cases_total, fill = cfr_cat)) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "Reds",
+                                 drop = FALSE, 
+                                 name = "CFR (%)") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
 
+**Figure 8**: Distribution of cases by country and week for 
+`r length(unique(cholera_outbreak_data$country))` countries experiencing a 
+cholera outbreak in the African region
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// cholera_plot_countries \\\
@@ -1619,7 +1646,7 @@ ggplot(cholera_weekly, aes(x = as.character(epiweek), y = cases_total, fill = CF
  This section plots a bar chart for cases over time, filled by country
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
 
-```{r cholera_plot_overall}
+```{r cholera_plot_countries}
 
 ## Prepare data for plotting ---------------------------------------------------
 
@@ -1630,15 +1657,136 @@ cholera_weekly_country <- cholera_outbreak_data %>%
               sum(new_confirmed_cases, na.rm = TRUE),
             deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
               sum(new_deaths_confirmed_cases, na.rm = TRUE), 
-            CFR = round(deaths / cases_total * 100, digits = 1))
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  ungroup() %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0))
 
 
 ## Plot bar charts -------------------------------------------------------------
 
-ggplot(cholera_weekly_country, aes(x = as.character(epiweek), y = cases_total, fill = country)) + 
-  geom_bar(stat = "identity")
+ggplot(cholera_weekly_country, aes(x = epiweek, y = cases_total, fill = reorder(country, cases_total))) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "viridis",
+                                  na.translate = FALSE, 
+                                  name = "Country") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 ```
+
+
+**Figure 9**: Spatial distribution of cumulative cholera cases and CFR by country
+in the African region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// cholera_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for countries experiencing a cholera outbreak, including
+ dots for cases and deaths as well as chloropleth for CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r cholera_map}
+
+## Prepare data for plotting ---------------------------------------------------
+
+cholera_country <- cholera_outbreak_data %>% 
+  group_by(country) %>% 
+  summarise(cholera_cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            cholera_deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            cholera_CFR = round(cholera_deaths / cholera_cases_total * 100, digits = 1))
+
+
+
+## join counts to map 
+afro_shp <- left_join(afro_shp, cholera_country, by = "country")
+
+
+## create a categorical variable using the age_categories function 
+## (we aren't using ages - but it functions the same way!)
+afro_shp <- afro_shp %>% 
+  mutate(cholera_CFR = cut(cholera_CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+"))) 
+
+
+## Change NAs for AFRO countries to be "No outbreak"
+## (leave non-AFRO as NA)
+afro_shp <- afro_shp %>% 
+  mutate(cholera_CFR_cat = if_else(WHO_REG == "AFRO" & is.na(cholera_CFR), 
+                               "No outbreak", as.character(cholera_CFR)))
+
+## change back to a factor variable
+afro_shp <- afro_shp %>% 
+  mutate(cholera_CFR_cat = factor(cholera_CFR_cat, 
+                                  levels = c("No outbreak", 
+                                             levels(cholera_CFR))))
+
+
+
+## Plot map --------------------------------------------------------------------
+
+## start an empy plot 
+ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = cholera_CFR_cat), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_discrete_sequential(drop = FALSE, 
+                    palette = "Greens", 
+                    na.value = "Grey60",
+                    labels = c(levels(afro_shp$cholera_CFR_cat), 
+                               "Non-AFRO"),
+                    name = "CFR(%)") +
+  ## plot dots for total cases - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = cholera_cases_total, 
+                 geometry = geometry, 
+                 colour = "Cases"),
+             stat = "sf_coordinates") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = cholera_deaths, 
+                 geometry = geometry, 
+                 colour = "Deaths"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10), 
+                        name = "Number of reports") +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("Dark red", "#F7C252"), 
+                      name = "") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale(location = "br") +
+  ## get rid of axes and extras
+  theme_void(base_size = 18) + 
+  theme()
+
+```
+
+
+
+
+
+
 
 ## IV-3. Measles outbreaks in the region 
   

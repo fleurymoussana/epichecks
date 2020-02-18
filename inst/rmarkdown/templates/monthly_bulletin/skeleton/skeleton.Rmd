@@ -296,13 +296,6 @@ cleaned_colnames <- epitrix::clean_labels(colnames(phe_data))
 colnames(phe_data) <- cleaned_colnames
 
 
-
-
-## drop the end of outbreak date variable as if all empty cannot fix dates
-## (should be fixed by the newer version of linelist)
-# phe_data <- phe_data %>% 
-#   select(-end_of_outbreak_date)
-
 ## use the guess_dates() function to make a first pass at date variables.
 phe_data <- phe_data %>%
   mutate_at(vars(matches("date|Date|reporting_period")), linelist::guess_dates,
@@ -319,7 +312,7 @@ phe_data <- phe_data %>%
               x[!is.na(x)] <- str_glue(
                 "{str_sub(x[!is.na(x)], 1, 4)}-W{str_sub(x[!is.na(x)] , 6, 7)}")
               
-              ## change in to an a week 
+              ## change in to an aweek 
               x <- as.aweek(x)
               
               ## return variable
@@ -382,8 +375,57 @@ phe_data$country[phe_data$country == "UR Tanzania"] <- "Tanzania (Mainland)"
 
 
 ## drop country dict again to save memory 
-rm(country_dict)
+# rm(country_dict)
 ```
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// read_outbreak_data \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section will read in the outbreak monitoring sheet in the designated excel. 
+ It will clean necessary columns and filter for outbreaks from 
+ the weeks of interest. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r read_outbreak_data}
+
+
+## file path where outbreak data is
+input_path_outbreak <- here::here("Data", "Outbreak weekly notification_compilation.xlsx") 
+
+
+## import the first sheet from the excel file
+outbreak_data <- import(input_path_outbreak, na = c("Select", "Start date"))
+
+## fix the "Start date" variable name 
+## was dropped as set as an NA value above 
+names(outbreak_data)[3] <- "Start date"
+
+## define clean variable names using clean_labels from the epitrix package
+cleaned_colnames <- epitrix::clean_labels(colnames(outbreak_data))
+
+## overwrite variable names with defined clean names
+colnames(outbreak_data) <- cleaned_colnames
+
+## create a more useful epiweek variable from the start_date var 
+outbreak_data <- outbreak_data %>% 
+  mutate(epiweek = as.aweek(start_date, floor_day = TRUE))
+
+## filter for weeks of interest 
+outbreak_data <- outbreak_data %>% 
+  filter(epiweek %in% levels(current_weeks))
+
+## recode countries names based on dictionary
+outbreak_data$country <- matchmaker::match_vec(outbreak_data$country,
+                                     dictionary = country_dict,
+                                     from = "Alias", 
+                                     to = "AdministrativeLevelName")
+
+
+```
+
+
 
 
 
@@ -1313,7 +1355,6 @@ The total number of ongoing public health events in the WHO AFRO as of the
 `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")` was `r count_ongoing_events`, 
 representing `r count_ongoing_events_types` types of events. `r top_events_list`  
 
-
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// events_plot \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1491,10 +1532,114 @@ ggplot() +
 
 
 
-
 ## IV-2. Cholera outbreaks in the region 
-  
-  
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// cholera_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ reporting events that are occuring due to Cholera based on outbreak linelist
+ data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r cholera_events}
+
+## subset outbreak data set for Cholera
+cholera_outbreak_data <- outbreak_data %>% 
+  filter(outbreak == "Cholera") 
+
+## pull together countries experiencing cholera outbreak
+cholera_countries <- str_c(
+  unique(cholera_outbreak_data$country),
+  collapse = ", ")
+
+## get summary counts for african region 
+cholera_counts <- cholera_outbreak_data %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            cases_susp_prob = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE), 
+            
+            cases_conf = sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            
+            CFR = round(deaths / cases_total * 100, digits = 1))
+            
+```
+
+Among the `r count_ongoing_events` ongoing events in the African region, 
+`r fmt_count(ongoing_events, event == "Cholera")` are due to cholera outbreaks. 
+`r length(unique(cholera_outbreak_data$countries))` countries 
+are experiencing a cholera outbreak: `r cholera_countries`. 
+
+During `r str_glue("{current_month} {current_year}")`, 
+`r cholera_counts$cases_total` cases have been reported 
+(`r cholera_counts$cases_susp_prob` and `r cholera_counts$cases_conf`) including
+`r cholera_counts$deaths` (case fatality ratio : `r cholera_counts$CFR`%). 
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// cholera_plot_overall \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r cholera_plot_overall}
+
+## Prepare data for plotting ---------------------------------------------------
+
+cholera_weekly <- cholera_outbreak_data %>% 
+  group_by(epiweek) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1))
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(cholera_weekly, aes(x = as.character(epiweek), y = cases_total, fill = CFR)) + 
+  geom_bar(stat = "identity")
+
+```
+
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// cholera_plot_countries \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by country
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r cholera_plot_overall}
+
+## Prepare data for plotting ---------------------------------------------------
+
+cholera_weekly_country <- cholera_outbreak_data %>% 
+  group_by(epiweek, country) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1))
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(cholera_weekly_country, aes(x = as.character(epiweek), y = cases_total, fill = country)) + 
+  geom_bar(stat = "identity")
+
+```
+
 ## IV-3. Measles outbreaks in the region 
   
   

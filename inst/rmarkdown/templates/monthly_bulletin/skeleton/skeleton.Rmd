@@ -602,35 +602,37 @@ during `r str_glue("{current_month} {current_year}")`
 
 ## Prepare data for plotting ---------------------------------------------------
 
-## get the total reports (n diseases*districts) per country
-## and proportion of expected reports for that month received by country
-completeness_data <- cntry_report_wk %>% 
-  mutate(
-    prop_reps = rowSums(select(., contains("n")) != 0) / 
-      expected_reports * 100, 
-    tot_reps = rowSums(select(., contains("n"))))
-
-## get the counts of reports missing data (n diseases*districts)    
-missing_data <- cntry_report_wk_miss %>% 
-  mutate(complete_reps = rowSums(select(., contains("n")))) %>% 
-  select(value, complete_reps) 
-
-## join two datasets
-completeness_data <- left_join(completeness_data, missing_data, by = "value")
-
-## drop extra columns 
-completeness_data <- completeness_data %>% 
-  select(value, prop_reps, tot_reps, complete_reps)
+## get counts of submitted reports and complete (non-missing reports) 
+## and proportion of the expected reports submitted for the month (i.e. how many weeks)
+completeness_data <- processed_data_agg %>% 
+  group_by(country, epiweek) %>% 
+  ## get number of reports (diseases*districts)
+  ## get number of retrpos (diseases*districts) where no missing flags
+  summarise(reports  = n(), 
+            complete = sum(is.na(miss_comment))) %>% 
+  ## fill in zeros for missing epiweeks
+  complete(epiweek, fill = list(reports = 0, 
+                                complete = 0)) %>% 
+  ## count reports where diseases*districts is not zero (i.e. submitions)
+  ## count the number of reports where non missing diseases*districts is same as total disease*district
+  ## divide submitted reports by expected weekly reports for proportion
+  summarise(tot_reps = sum(reports != 0), 
+            complete_reps = sum(complete == reports), 
+            prop_reps = tot_reps / expected_reports * 100)
 
 
 ## join data set to the shapefile for plotting 
-afro_shp <- left_join(afro_shp, completeness_data, by = c("country" = "value"))
+afro_shp <- left_join(afro_shp, completeness_data, by = "country")
 
-## recode NA to zero for AFRO countries 
+## recode NA props to zero for AFRO countries 
+## recode 0 counts to NA for all countries 
 afro_shp <- afro_shp %>% 
   mutate(prop_reps = if_else(is.na(prop_reps) &
                                    WHO_REG == "AFRO", 0,
-                                 prop_reps))
+                                 prop_reps),
+         tot_reps = if_else(tot_reps == 0, NA_integer_, tot_reps), 
+         complete_reps = if_else(complete_reps == 0, NA_integer_, complete_reps)
+         )
 
 ## define nice groups 
 ## one group will be 0 only 
@@ -686,7 +688,7 @@ ggplot() +
                  colour = "Non-missing reports"),
              stat = "sf_coordinates") +
   ## set the range in size of points
-  scale_size_continuous(range = c(3,10), 
+  scale_size_continuous(range = c(2,9),
                         name = "Number of reports") +
   ## set the colours of dots 
   scale_colour_manual(values = c("Dark red", "#F7C252"), 
@@ -1218,11 +1220,10 @@ for (i in 1:length(levels(current_weeks))) {
 A total of [x] alerts thresholds were confirmed as outbreaks as result of 
 investigations ([x])%, [x] were discarded following verification and 
 investigation ([x]%) and [x] are still under verification ([x]). 
-Figure 4 shows the spatial distribution of diseases and conditions that 
-triggered alert thresholds by country and verification status. 
+
 
 **Figure 4:** Spatial distribution of diseases and conditions that triggered alert 
-thresholds by country and verification status in the African region
+thresholds by country in the African region
   
   
 # IV- Ongoing outbreaks and other health emergencies in the region 

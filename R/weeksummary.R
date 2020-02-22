@@ -10,7 +10,7 @@
 #' These folders need to exist already - only the current week folder will be created.
 #' The file itself will labelled with the current week, e.g. "SummaryReport_2018-w35.xlsx"
 #'
-#' @importFrom dplyr mutate filter group_by summarise if_else tibble left_join select
+#' @importFrom dplyr mutate filter group_by summarise if_else tibble left_join select n
 #' @importFrom aweek week2date
 #' @importFrom stringr str_sub str_glue
 #' @importFrom tidyr replace_na

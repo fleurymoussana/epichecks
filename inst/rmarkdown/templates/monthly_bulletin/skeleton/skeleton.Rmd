@@ -935,9 +935,12 @@ ggplot(combo_reports,
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
 ```{r tile_plot, fig.width = 9*1.25, fig.height = 12}
-## tile plot 
+
+
+## Prepare data for plotting ---------------------------------------------------
 
 ## categorise reporting statuses
+## create a character var based on number of reports submitted, complete and ontime
 cats_fix <- country_region_counts %>% 
   mutate(categories = case_when(
     reports == 0       ~ "Not submitted", 
@@ -953,6 +956,7 @@ cats_fix <- country_region_counts %>%
     reports != 0 &
       complete != 0 & 
       timely != 0      ~  "Complete & ontime"), 
+    ## changes to a factor variable and make sure levels are in correct order
     categories = factor(categories, 
                         levels = c("Complete & ontime", 
                                    "Incomplete & ontime",
@@ -960,25 +964,36 @@ cats_fix <- country_region_counts %>%
                                    "Incomplete & Late",
                                    "Not submitted"))
   ) %>% 
-  ungroup() %>% 
-  select(-WHO_SUBREG)
+  ungroup() %>%  ## remove grouping
+  select(-WHO_SUBREG) ## drop the WHO_SUBREG variable
 
-## join to rest of afro countries 
-tile_counts <- left_join(region_countries, cats_fix, 
+## join to dataframe of afro countries created who_subregions code chunk 
+tile_counts <- left_join(region_countries, 
+                         cats_fix, 
                          by = "country") %>% 
-  mutate(epiweek = fct_explicit_na(epiweek, levels(current_weeks)[1])) %>% 
+  ## put empty counts in the first epiweek of interest
+  mutate(epiweek = fct_explicit_na(epiweek, 
+                                   levels(current_weeks)[1])) %>% 
+  ## fill in missing counts (set to zero)
   complete(country, epiweek, fill = list(reports = 0, 
                                 complete = 0, 
                                 timely = 0, 
                                 categories = "Not submitted")) %>% 
+  ## fill downards the WHO subregion variable 
   fill(WHO_SUBREG)
 
+## Plot tile chart -------------------------------------------------------------
 
 ggplot(tile_counts, aes(x = epiweek, y = country, fill = categories)) + 
+  ## set the border of tiles to be white and thin
   geom_tile(colour = "white", size = 0.25) + 
+  ## attempt to facet by WHO region (messy, ignore)
   # facet_grid(WHO_SUBREG~., scales = "free_y", space = "free") +
+  ## make axes meet at origin and arange countries alphabetically
   scale_y_discrete(expand = c(0,0), limits = rev(unique(tile_counts$country))) + 
+  ## colour tiles appropriately (traffic light system)
   scale_fill_manual(values = c("#006027", "#abdda4", "#e6f598", "#f46d43", "#d53e4f")) + 
+  ## make tiles boxes
   coord_fixed(ratio = 1) +
   ## change axis labels
   labs(x = "Calendar week") +

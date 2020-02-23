@@ -923,14 +923,13 @@ ggplot(combo_reports,
 ```
 
 
-**Alternative**: Tile plot showing number of country reports by completeness 
+**Figure 4**: Tile plot showing number of country reports by completeness 
 (non-missings) and timeliness for each week
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// tile_plot \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
- This is a suggested alternative way of presenting the data. 
  This section plots a tile plot showing the reporting status of each country
  by week. 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -990,14 +989,13 @@ ggplot(tile_counts, aes(x = epiweek, y = country, fill = categories)) +
 ```
 
 
-**Alternative**: Bivariate map showing number of country reports by completeness 
+**Figure 5**: Bivariate map showing number of country reports by completeness 
 (non-missings) and timeliness. 
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// bivariate_map \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
- This is a suggested alternative way of presenting the data. 
  This section plots a bivariate map - a choropleth which is coloured depending 
  on whether countries submitted data complete and/or ontime. 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -1225,7 +1223,7 @@ investigations ([x])%, [x] were discarded following verification and
 investigation ([x]%) and [x] are still under verification ([x]). 
 
 
-**Figure 4:** Spatial distribution of diseases and conditions that triggered alert 
+**Figure 6:** Spatial distribution of diseases and conditions that triggered alert 
 thresholds by country in the African region
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1474,6 +1472,8 @@ The total number of ongoing public health events in the WHO AFRO as of the
 `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")` was `r count_ongoing_events`, 
 representing `r count_ongoing_events_types` types of events. `r top_events_list`  
 
+**Figure 7**: Distribution of ongoing public health events in the African region
+as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// events_plot \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1527,7 +1527,7 @@ ongoing_events %>%
 ```  
   
   
-**Figure 6**: Spatial distribution of ongoing public health events in the African
+**Figure 8**: Spatial distribution of ongoing public health events in the African
 region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`  
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// grading_map \\\
@@ -1701,7 +1701,7 @@ During `r str_glue("{current_month} {current_year}")`,
 (`r cholera_counts$cases_susp_prob` and `r cholera_counts$cases_conf`) including
 `r cholera_counts$deaths` (case fatality ratio : `r cholera_counts$CFR`%). 
 
-**Figure 7**: Distribution of cases and CFR by week for 
+**Figure 9**: Distribution of cases and CFR by week for 
 `r length(unique(cholera_outbreak_data$country))` countries experiencing a 
 cholera outbreak in the African region
 
@@ -1750,7 +1750,7 @@ ggplot(cholera_weekly, aes(x = epiweek, y = cases_total, fill = cfr_cat)) +
 ```
 
 
-**Figure 8**: Distribution of cases by country and week for 
+**Figure 10**: Distribution of cases by country and week for 
 `r length(unique(cholera_outbreak_data$country))` countries experiencing a 
 cholera outbreak in the African region
 
@@ -1798,7 +1798,7 @@ ggplot(cholera_weekly_country, aes(x = epiweek, y = cases_total, fill = reorder(
 ```
 
 
-**Figure 9**: Spatial distribution of cumulative cholera cases and CFR by country
+**Figure 11**: Spatial distribution of cumulative cholera cases and CFR by country
 in the African region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

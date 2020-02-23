@@ -25,7 +25,7 @@
 #' @importFrom purrr map
 #' @importFrom here here
 #'
-#' @seealso \code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+#' @seealso \code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 #' \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 #' for threshold flags. In addition, see \code{\link{country_feedback}},
 #' \code{\link{country_letters}} and \code{\link{weekly_summary}} for producing
@@ -54,7 +54,7 @@ week_report <- function(current_week = "2018-W35",
   processed_data <- import_list(file_paths, rbind = FALSE, na = "NULL")
 
   ## apply cleaning steps to each country dataset in list
-  processed_data <- purrr::map(processed_data, clean_data)
+  processed_data <- purrr::map(processed_data, clean_idsr)
 
   ## pull country name from first row of country variable
   cleaned_names <- purrr::map_chr(purrr::map(processed_data, "country"), 1L)

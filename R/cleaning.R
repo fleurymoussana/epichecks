@@ -14,7 +14,7 @@
 #' @importFrom stringr str_pad str_glue
 #' @importFrom aweek as.aweek
 #' @export
-clean_data <- function(x) {
+clean_idsr <- function(x) {
 
   ## throw warning if week numbers above 60
   if (max(x$week_number, na.rm = TRUE) >= 60) {

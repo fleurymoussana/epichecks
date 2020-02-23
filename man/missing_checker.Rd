@@ -3,7 +3,7 @@
 \name{missing_checker}
 \alias{missing_checker}
 \title{Flag weeks with missing counts for cases or deaths.
-Requires WHO IDSR data which has been prepared using the {clean_data} function.
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 Will return variables for missing cases, missing deaths and a combined variable
 with both in.}
 \usage{
@@ -14,10 +14,10 @@ missing_checker(x)
 }
 \description{
 Flag weeks with missing counts for cases or deaths.
-Requires WHO IDSR data which has been prepared using the {clean_data} function.
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 Will return variables for missing cases, missing deaths and a combined variable
 with both in.
 }
 \seealso{
-\code{\link{clean_data}} for preparing IDSR data for use with missing_checker.
+\code{\link{clean_idsr}} for preparing IDSR data for use with missing_checker.
 }

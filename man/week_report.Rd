@@ -41,7 +41,7 @@ country PDF letters, a weekly excel summary report and will aggregate country
 data in to one large dataframe.
 }
 \seealso{
-\code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+\code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 for threshold flags. In addition, see \code{\link{country_feedback}},
 \code{\link{country_letters}} and \code{\link{weekly_summary}} for producing

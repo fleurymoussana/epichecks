@@ -4,7 +4,7 @@
 \alias{threshold_checker}
 \title{Flag weeks with case or death counts which are higher than the threshold defined
 in threshold dictionary.
-Requires WHO IDSR data which has been prepared using the {clean_data} function.
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 Will return variables for unique regions, alerts, and recommendations.}
 \usage{
 threshold_checker(x)
@@ -15,9 +15,9 @@ threshold_checker(x)
 \description{
 Flag weeks with case or death counts which are higher than the threshold defined
 in threshold dictionary.
-Requires WHO IDSR data which has been prepared using the {clean_data} function.
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 Will return variables for unique regions, alerts, and recommendations.
 }
 \seealso{
-\code{\link{clean_data}} for preparing IDSR data for use with threshold_checker
+\code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker
 }

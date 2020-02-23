@@ -160,7 +160,7 @@ processed_data <- import_list(file_paths, rbind = FALSE, na = "NULL")
 
 
 ## apply cleaning steps to each country dataset in list
-processed_data <- purrr::map(processed_data, epichecks::clean_data)
+processed_data <- purrr::map(processed_data, epichecks::clean_idsr)
 
 ## pull country name from first row of country variable
 cleaned_names <- purrr::map_chr(purrr::map(processed_data, "country"), 1L)

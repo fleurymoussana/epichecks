@@ -1,10 +1,10 @@
 #' Create PDF letters with feedback for countries. Returns an PDF document
 #' for each country with summary counts of issues flagged.
-#' Requires WHO IDSR data which has been prepared using the {clean_data} function,
+#' Requires WHO IDSR data which has been prepared using the {clean_idsr} function,
 #' and then run through the {missing_checker} and {threshold_checker} functions,
 #' and all being stored in a list with a data frame for each country.
 #'
-#' @param x A list of data frames which has been processed with {clean_data},
+#' @param x A list of data frames which has been processed with {clean_idsr},
 #'  {missing_checker} and {threshold_checker}.
 #' @param flags A list including missings and alert flags for each country, produced
 #' by {country_feedback}
@@ -21,7 +21,7 @@
 #' @importFrom here here
 #' @importFrom rmarkdown render
 #'
-#' @seealso \code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+#' @seealso \code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 #' \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 #' for threshold flags.
 #'

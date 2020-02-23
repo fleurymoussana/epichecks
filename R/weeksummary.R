@@ -17,7 +17,7 @@
 #' @importFrom here here
 #' @importFrom rio export
 #'
-#' @seealso \code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+#' @seealso \code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 #' \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 #' for threshold flags.
 #'

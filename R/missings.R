@@ -1,5 +1,5 @@
 #' Flag weeks with missing counts for cases or deaths.
-#' Requires WHO IDSR data which has been prepared using the {clean_data} function.
+#' Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 #' Will return variables for missing cases, missing deaths and a combined variable
 #' with both in.
 #'
@@ -8,7 +8,7 @@
 #' @importFrom dplyr filter mutate if_else mutate_at na_if
 #' @importFrom stringr str_glue
 #'
-#' @seealso \code{\link{clean_data}} for preparing IDSR data for use with missing_checker.
+#' @seealso \code{\link{clean_idsr}} for preparing IDSR data for use with missing_checker.
 #'
 #' @export
 missing_checker <- function(x) {

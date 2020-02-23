@@ -1,6 +1,6 @@
 #' Flag weeks with case or death counts which are higher than the threshold defined
 #' in threshold dictionary.
-#' Requires WHO IDSR data which has been prepared using the {clean_data} function.
+#' Requires WHO IDSR data which has been prepared using the {clean_idsr} function.
 #' Will return variables for unique regions, alerts, and recommendations.
 #'
 #' @param x A data frame
@@ -8,7 +8,7 @@
 #' @importFrom dplyr arrange mutate group_by case_when if_else ungroup
 #' @importFrom stringr str_glue
 #'
-#' @seealso \code{\link{clean_data}} for preparing IDSR data for use with threshold_checker
+#' @seealso \code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker
 #'
 #' @export
 threshold_checker <- function(x) {

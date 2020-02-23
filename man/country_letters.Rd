@@ -4,7 +4,7 @@
 \alias{country_letters}
 \title{Create PDF letters with feedback for countries. Returns an PDF document
 for each country with summary counts of issues flagged.
-Requires WHO IDSR data which has been prepared using the {clean_data} function,
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function,
 and then run through the {missing_checker} and {threshold_checker} functions,
 and all being stored in a list with a data frame for each country.}
 \usage{
@@ -16,7 +16,7 @@ country_letters(
 )
 }
 \arguments{
-\item{x}{A list of data frames which has been processed with {clean_data},
+\item{x}{A list of data frames which has been processed with {clean_idsr},
 {missing_checker} and {threshold_checker}.}
 
 \item{flags}{A list including missings and alert flags for each country, produced
@@ -34,12 +34,12 @@ These folders need to exist already - only the current week folder will be creat
 \description{
 Create PDF letters with feedback for countries. Returns an PDF document
 for each country with summary counts of issues flagged.
-Requires WHO IDSR data which has been prepared using the {clean_data} function,
+Requires WHO IDSR data which has been prepared using the {clean_idsr} function,
 and then run through the {missing_checker} and {threshold_checker} functions,
 and all being stored in a list with a data frame for each country.
 }
 \seealso{
-\code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+\code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 for threshold flags.
 }

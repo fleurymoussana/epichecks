@@ -27,7 +27,7 @@ The file itself will labelled with the current week, e.g. "SummaryReport_2018-w3
 Create an excel summary report of data submitted for week by each country.
 }
 \seealso{
-\code{\link{clean_data}} for preparing IDSR data for use with threshold_checker,
+\code{\link{clean_idsr}} for preparing IDSR data for use with threshold_checker,
 \code{\link{missing_checker}} for missing flags and \code{\link{threshold_checker}}
 for threshold flags.
 }

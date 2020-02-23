@@ -1224,8 +1224,108 @@ investigation ([x]%) and [x] are still under verification ([x]).
 
 **Figure 4:** Spatial distribution of diseases and conditions that triggered alert 
 thresholds by country in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// threshold_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for thresholds - a choropleth which is coloured depending 
+ on number of thresholds triggered, and dots proportional to number of diseases
+ triggering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r threshold_map}
+## Prepare data for plotting ---------------------------------------------------
+
+## use all reports to get counts of thresholds triggered and diseases trigerring
+## thresholds by country and week
+threshold_map_counts <- processed_data_agg %>% 
+  group_by(epiweek, country) %>%                 # do for each week and each country
+  filter(alert == "Flag") %>%                    # only keep rows over thresholds
+  summarise(threshold_counts = n(),              # count total thresholds triggered
+            disease_counts = n_distinct(disease)  # count diseases over threshold
+            )
+
+## spread to wide format - one column per country
+threshold_map_counts <- pivot_wider(threshold_map_counts, 
+                                    id_cols = country, 
+                                    names_from = epiweek, 
+                                    values_from = c(threshold_counts, disease_counts))
+## bind counts columns to shapefile
+afro_shp <- left_join(afro_shp, threshold_map_counts, by = "country")
+
+## define breaks in advance 
+
+for (i in levels(current_weeks)) {
+
+  ## pull together name of threshold count variable for week
+  thresh_var <- str_glue("threshold_counts_{i}")
   
+  ## create categorical variable out of threshold_counts for week
+  afro_shp[[thresh_var]] <- cut(afro_shp[[thresh_var]],
+           breaks = c(0, 1, 100, 200, 300, 400, 500, Inf),
+           include.lowest = TRUE,
+           labels = c("0", "1-100", "101-200", "201-300", "301-400", "401-500", ">500")
+           )
   
+  ## change countries with threshold count NA who are in AFRO to 0 
+  afro_shp[[thresh_var]][is.na(afro_shp[[thresh_var]]) & afro_shp$WHO_REG == "AFRO"] <- "0"
+
+  ## pull together name of disease count variable for week 
+  disease_var <- str_glue("disease_counts_{i}")
+  
+  ## create categorical variable out of threshold_counts for week
+  afro_shp[[disease_var]] <- cut(afro_shp[[disease_var]],
+           breaks = c(0, 0.1, 1, 2, 3, 4, Inf),
+           include.lowest = TRUE,
+           labels = c("0", "1", "2", "3", "4", "5+")
+           )
+  
+  ## change countries with threshold count NA who are in AFRO to 0 
+  afro_shp[[disease_var]][is.na(afro_shp[[disease_var]]) & 
+                            afro_shp$WHO_REG == "AFRO"] <- "0"
+  
+  ## Plot map ------------------------------------------------------------------
+
+  print(
+  ggplot() +
+    ## plot shapefile and fill by proportion reporting
+    ## make the borders thin and grey
+    geom_sf(data = afro_shp, 
+            aes_(fill = as.name(thresh_var)), 
+            size = 0.1,
+            col = "grey80") + 
+    ## set the colours for choropleth
+    ## set missings to grey and label them Non-AFRO
+    scale_fill_discrete_sequential(drop = FALSE, 
+                      palette = "Oranges", 
+                      na.value = "Grey60",
+                      labels = c(levels(afro_shp[[thresh_var]]), 
+                                 "Non-AFRO"),
+                      name = "Threshold alerts (n)") +
+    ## plot dots for total cases - size based on number
+    geom_point(data = afro_shp, 
+               aes_(size = as.name(disease_var), 
+                    geometry = ~"geometry"), 
+                   colour = "Blue",
+               stat = "sf_coordinates") +
+    ## set the range in size of points
+    scale_size_continuous(range = c(3,10), 
+                          name = "Disease types (n)") +
+    ## add a scale bar
+    annotation_scale(location = "br") +
+    ## get rid of axes and extras
+    theme_void(base_size = 18) + 
+    theme()
+  )
+    
+}
+
+
+```
+
+
+
 # IV- Ongoing outbreaks and other health emergencies in the region 
 
 ## IV-1. Overview of ongoing events 
@@ -1371,7 +1471,7 @@ representing `r count_ongoing_events_types` types of events. `r top_events_list`
 ## plot with counts data 
 ggplot(top_ongoing_events_base) + 
   ## plot a bar and reorder events based on the counts (use counts as they are)
-  geom_bar(aes(x = reorder(value, n), y = n), stat = "identity", fill = "red") + 
+  geom_bar(aes(x = reorder(value, n), y = n), stat = "identity", fill = "#79ABE2") + 
   ## flip x and y axes 
   coord_flip() + 
   ## make the y axes meet at origin 
@@ -1577,8 +1677,8 @@ cholera_counts <- cholera_outbreak_data %>%
             
 ```
 
-Among the `r count_ongoing_events` ongoing events in the African region, 
-`r fmt_count(ongoing_events, event == "Cholera")` are due to cholera outbreaks. 
+Among the `r nrow(outbreak_data)` ongoing outbreaks in the African region, 
+`r fmt_count(outbreak_data, outbreak == "Cholera")` are due to cholera outbreaks. 
 `r length(unique(cholera_outbreak_data$country))` countries 
 are experiencing a cholera outbreak: `r cholera_countries`. 
 
@@ -1750,7 +1850,7 @@ ggplot() +
   ## set the colours for choropleth
   ## set missings to grey and label them Non-AFRO
   scale_fill_discrete_sequential(drop = FALSE, 
-                    palette = "Greens", 
+                    palette = "Reds", 
                     na.value = "Grey60",
                     labels = c(levels(afro_shp$cholera_CFR_cat), 
                                "Non-AFRO"),
@@ -1771,7 +1871,7 @@ ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("Dark red", "#F7C252"), 
+  scale_colour_manual(values = c("#F7C252", "Dark red"), 
                       name = "") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +

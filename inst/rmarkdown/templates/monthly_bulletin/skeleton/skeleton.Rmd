@@ -1579,18 +1579,20 @@ afro_shp <- afro_shp %>%
 ## create categorical variables for dots 
 
 afro_shp$total_cases <- cut(afro_shp$total_cases, 
-    breaks = c(0, 100, 1000, 10000, Inf), 
+    breaks = c(0, 100, 1000, 5000, 10000, Inf), 
     labels = c(1, 
                2, 
                3, 
-               4))
+               4, 
+               5))
 
 afro_shp$deaths <- cut(afro_shp$deaths, 
-    breaks = c(0, 100, 1000, 10000, Inf), 
+    breaks = c(0, 100, 1000, 5000, 10000, Inf), 
     labels = c(1, 
                2, 
                3, 
-               4))
+               4, 
+               5))
 
 
 ## Plot map --------------------------------------------------------------------
@@ -1631,11 +1633,12 @@ ggplot() +
                  colour = "Deaths"),
              stat = "sf_coordinates") +
   ## set the range in size of points
-  scale_size_continuous(range = c(3,10),
+  scale_size_continuous(range = c(2,10),
                         name = "Number", 
                       labels = c("1-100",
                                  "101-1000", 
-                                 "1001-10000", 
+                                 "1001-5000", 
+                                 "5001-10000", 
                                  "10001+") ) +
   ## set the colours of dots 
   scale_colour_manual(values = c("#00366C", "#79ABE2"), 

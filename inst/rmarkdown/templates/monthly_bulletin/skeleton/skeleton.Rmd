@@ -688,7 +688,7 @@ ggplot() +
                  colour = "Non-missing reports"),
              stat = "sf_coordinates") +
   ## set the range in size of points
-  scale_size_continuous(range = c(2,9),
+  scale_size_continuous(range = c(2,8),
                         name = "Number of reports") +
   ## set the colours of dots 
   scale_colour_manual(values = c("Dark red", "#F7C252"), 
@@ -1084,11 +1084,14 @@ cols2 <- cols2 %>%
 cols2 <- cols2 %>% 
   mutate(merger = str_glue("{rws}-{cls}")) 
 
+cols2 <- cols2 %>% 
+  distinct(merger, .keep_all = TRUE)
+
 map_counts <- country_region_counts %>% 
   group_by(country) %>% 
   summarise(complete = sum(complete > 0), 
             timely = sum(timely > 0), 
-            merger = str_glue("{complete}-{timely}")) 
+            merger = str_glue("{complete}-{timely}"))
 
 
 map_counts <- left_join(map_counts, cols2, by = "merger")
@@ -1244,7 +1247,9 @@ threshold_map_counts <- processed_data_agg %>%
   filter(alert == "Flag") %>%                    # only keep rows over thresholds
   summarise(threshold_counts = n(),              # count total thresholds triggered
             disease_counts = n_distinct(disease)  # count diseases over threshold
-            )
+            ) %>% 
+  ungroup() %>% 
+  mutate(epiweek = str_replace(epiweek, "-", "_"))
 
 ## spread to wide format - one column per country
 threshold_map_counts <- pivot_wider(threshold_map_counts, 
@@ -1254,12 +1259,15 @@ threshold_map_counts <- pivot_wider(threshold_map_counts,
 ## bind counts columns to shapefile
 afro_shp <- left_join(afro_shp, threshold_map_counts, by = "country")
 
+## swap the dash for the underscore to work with ggplot
+loop_weeks <- str_replace(levels(current_weeks), "-", "_")
+
 ## define breaks in advance 
 
-for (i in levels(current_weeks)) {
-
+for (i in loop_weeks) {
+  
   ## pull together name of threshold count variable for week
-  thresh_var <- str_glue("threshold_counts_{i}")
+  thresh_var <- str_c("threshold_counts_", i)
   
   ## create categorical variable out of threshold_counts for week
   afro_shp[[thresh_var]] <- cut(afro_shp[[thresh_var]],
@@ -1272,18 +1280,21 @@ for (i in levels(current_weeks)) {
   afro_shp[[thresh_var]][is.na(afro_shp[[thresh_var]]) & afro_shp$WHO_REG == "AFRO"] <- "0"
 
   ## pull together name of disease count variable for week 
-  disease_var <- str_glue("disease_counts_{i}")
+  disease_var <- str_c("disease_counts_", i)
   
   ## create categorical variable out of threshold_counts for week
   afro_shp[[disease_var]] <- cut(afro_shp[[disease_var]],
-           breaks = c(0, 0.1, 1, 2, 3, 4, Inf),
-           include.lowest = TRUE,
-           labels = c("0", "1", "2", "3", "4", "5+")
+           breaks = c(0, 1, 2, 3, 4, Inf),
+           include.lowest = FALSE,
+           labels = c(1, 2, 3, 4, 5)
            )
   
+  ## change to an integer for plotting 
+  afro_shp[[disease_var]] <- as.integer(afro_shp[[disease_var]])
+  
   ## change countries with threshold count NA who are in AFRO to 0 
-  afro_shp[[disease_var]][is.na(afro_shp[[disease_var]]) & 
-                            afro_shp$WHO_REG == "AFRO"] <- "0"
+  # afro_shp[[disease_var]][is.na(afro_shp[[disease_var]]) & 
+  #                           afro_shp$WHO_REG == "AFRO"] <- "0"
   
   ## Plot map ------------------------------------------------------------------
 
@@ -1305,18 +1316,21 @@ for (i in levels(current_weeks)) {
                       name = "Threshold alerts (n)") +
     ## plot dots for total cases - size based on number
     geom_point(data = afro_shp, 
-               aes_(size = as.name(disease_var), 
-                    geometry = ~"geometry"), 
-                   colour = "Blue",
+               aes_string(size = disease_var, 
+                    geometry = "geometry"), 
+                   colour =  "#79ABE2",
                stat = "sf_coordinates") +
     ## set the range in size of points
-    scale_size_continuous(range = c(3,10), 
-                          name = "Disease types (n)") +
+    scale_size_continuous(range = c(2,8), 
+                          name = "Disease types (n)",
+                          limits = c(1, 5),
+                          labels = c("1", "2", "3", "4", "5+")) +
     ## add a scale bar
     annotation_scale(location = "br") +
     ## get rid of axes and extras
     theme_void(base_size = 18) + 
-    theme()
+    ## add a title 
+    labs(title = str_c("Calendar week ", str_replace(i, "_", " ")))
   )
     
 }
@@ -1878,8 +1892,7 @@ ggplot() +
   ## add a scale bar
   annotation_scale(location = "br") +
   ## get rid of axes and extras
-  theme_void(base_size = 18) + 
-  theme()
+  theme_void(base_size = 18)
 
 ```
 

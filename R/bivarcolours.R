@@ -23,8 +23,8 @@ make_colours <- function(og_pal1 = "OrRd" ,
                          num2 = 5) {
 
    ## get colour palettes
-   sequence1 <- colorspace::sequential_hcl(num1, palette = og_pal1)
-   sequence2 <- colorspace::sequential_hcl(num2, palette = og_pal2)
+   sequence1 <- sequential_hcl(num1, palette = og_pal1)
+   sequence2 <- sequential_hcl(num2, palette = og_pal2)
 
    ## convert darkest colours to RGB
    deepest <- hex2RGB(c(sequence1[1], sequence2[1]))
@@ -35,6 +35,20 @@ make_colours <- function(og_pal1 = "OrRd" ,
               deepest[1], deepest[2]
      )
    )
+
+
+   ## square to be filled
+    #
+    #                  6
+    #         ^  ------------>
+    #         |  ^   ^   ^   ^
+    #   1     |  |   |   |   |
+    # (seq1)  | 2|  3|  4|   | 7
+    #         |  |   |   |   |
+    #         |  |   |   |   |
+    #         |--------------->
+    #               5 (seq2)
+
 
    ## create an empty list for sequences
    output <- list()
@@ -51,11 +65,17 @@ make_colours <- function(og_pal1 = "OrRd" ,
    palette <- colorRampPalette(colors = c(mix_deep, sequence2[1]))
    output[[num2 + 2]] <- palette(num1)
 
-   ## get the inbetweens going upwards between sequence 2 and newly created top outter line
-   for (i in 2:(num2 - 1)) {
-     palette <- colorRampPalette(colors = c(output[[num2 + 1]][i], output[[num2]][i]))
-     output[[i]] <- palette(num1)
+
+
+   ## only get inbetween columns if greater than 3 seq2
+   if (num2 >= 3) {
+      ## get the inbetweens going upwards between sequence 2 and newly created top outter line
+      for (i in 2:(num2 - 1)) {
+         palette <- colorRampPalette(colors = c(output[[num2 + 1]][i], output[[num2]][i]))
+         output[[i]] <- palette(num1)
+      }
    }
+
 
 
    ## create an easier to understand grid with rows=seq1 and cols=seq1
@@ -67,18 +87,20 @@ make_colours <- function(og_pal1 = "OrRd" ,
    ## make the last column the outer column
    simpler[2:num1, num2] <- rev(output[[num2 + 2]][1:(num1 - 1)])
 
-   ## fill in the columns between
-   inbetweeners <- c(2:(num2 - 1))
+   ## only get inbetween columns if greater than 3 seq2
+   if (num2 >= 3) {
+      ## fill in the columns between
+      inbetweeners <- c(2:(num2 - 1))
 
-   for (i in 1:length(inbetweeners)) {
-      ## define which is the currrent number
-      mat_num <- inbetweeners[i]
-      ## the other end
-      list_num <- rev(inbetweeners)[i]
-      ## fill in appropriate column
-      simpler[2:num1 , mat_num] <- rev(output[[list_num]][1:(num1 - 1)])
+      for (i in 1:length(inbetweeners)) {
+         ## define which is the currrent number
+         mat_num <- inbetweeners[i]
+         ## the other end
+         list_num <- rev(inbetweeners)[i]
+         ## fill in appropriate column
+         simpler[2:num1 , mat_num] <- rev(output[[list_num]][1:(num1 - 1)])
+      }
    }
-
 
 
    ## find which num is bigger
@@ -88,10 +110,10 @@ make_colours <- function(og_pal1 = "OrRd" ,
    structured <- expand.grid(
       ## create a data frame with two vars
      data.frame(
-        ## rows is sequence2 (plus x number of NAs to fill in)
-        rws = c(1:num2, rep.int(NA, max_num - num2)),
-        ## cols is seq1 plus extra NAs
-        cls = c(1:num1, rep.int(NA, max_num - num1))
+        ## rows is sequence1 (plus x number of NAs to fill in)
+        rws = c(1:num1, rep.int(NA, max_num - num1)),
+        ## cols is seq2 plus extra NAs
+        cls = c(1:num2, rep.int(NA, max_num - num2))
                 )
    )
 
@@ -102,7 +124,7 @@ make_colours <- function(og_pal1 = "OrRd" ,
    structured$clrs <- NA
 
    for (i in 1:nrow(structured)) {
-      structured[i, "clrs"] <- simpler[structured$cls[i], structured$rws[i]]
+      structured[i, "clrs"] <- simpler[structured$rws[i], structured$cls[i]]
    }
 
    ## return list with colours

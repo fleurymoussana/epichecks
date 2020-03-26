@@ -5,16 +5,16 @@
 
 <!-- badges: start -->
 
-[![Travis build
-status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks)
-[![AppVeyor build
-status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks)
-[![Codecov test
-coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master)
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks)
+<!-- [![Travis build status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks) -->
+
+<!-- [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks) -->
+
+<!-- [![Codecov test coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master) -->
+
+<!-- [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental) -->
+
+<!-- [![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks) -->
+
 <!-- badges: end -->
 
 The goal of {epichecks} is to provide functions for simplifying data
@@ -64,9 +64,12 @@ As an example:
   - WHO AFRO
       - Data
           - Processed (contains IDSR data for each country)
-          - Outputs (where the output will go)
+          - Outputs (where the output will
+go)
               - Verification
       - WHO\_AFRO.Rproj
+
+<img src="C:/Program Files/R/R-3.6.0/library/epichecks/extdata/folder_layout.png" width="100%" />
 
 ## Getting started
 
@@ -77,7 +80,7 @@ This will produce outputs for week 35 of 2018 as an example. See
 
 ``` r
 library(epichecks)
-week_report()
+week_report(current_week = "2018-W35")
 ```
 
 Please note that the ‘epichecks’ project is released with a [Contributor

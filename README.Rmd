@@ -16,11 +16,11 @@ knitr::opts_chunk$set(
 # epichecks
 
 <!-- badges: start -->
-[![Travis build status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks)
-[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks)
-[![Codecov test coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master)
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks)
+<!-- [![Travis build status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks) -->
+<!-- [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks) -->
+<!-- [![Codecov test coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master) -->
+<!-- [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental) -->
+<!-- [![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks) -->
 <!-- badges: end -->
 
 The goal of {epichecks} is to provide functions for simplifying data quality
@@ -70,6 +70,11 @@ As an example:
    + WHO_AFRO.Rproj
       
 
+```{r folders, echo = FALSE}
+## load image of folder structure
+knitr::include_graphics(system.file("extdata", "folder_layout.png", package = "epichecks"))
+```
+
 ## Getting started 
 
 Open your R project and type the below code.  
@@ -79,7 +84,7 @@ See ?week_report for details of parameters that can be adjusted.
 
 ``` r
 library(epichecks)
-week_report()
+week_report(current_week = "2018-W35")
 ```
 
 

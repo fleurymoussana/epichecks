@@ -16,11 +16,11 @@ knitr::opts_chunk$set(
 # epichecks
 
 <!-- badges: start -->
-<!-- [![Travis build status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks) -->
-<!-- [![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks) -->
-<!-- [![Codecov test coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master) -->
-<!-- [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental) -->
-<!-- [![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks) -->
+[![Travis build status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks)
+[![Codecov test coverage](https://codecov.io/gh/R4IDSR/epichecks/branch/master/graph/badge.svg)](https://codecov.io/gh/R4IDSR/epichecks?branch=master)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://www.tidyverse.org/lifecycle/#experimental)
+[![CRAN status](https://www.r-pkg.org/badges/version/epichecks)](https://CRAN.R-project.org/package=epichecks)
 <!-- badges: end -->
 
 The goal of {epichecks} is to provide functions for simplifying data quality
@@ -54,22 +54,18 @@ remotes::install_github("R4IDSR/epichecks")
 
 In order for the funtions to work you need to have folders set up correctly. 
 
-One folder which contains an R-project file (e.g. WHO_AFRO.Rproj) and a Data folder. 
-Within the data folder you need a processed folder, which contains IDSR data,
-and an outputs folder which contains another folder called Verification. 
-Within verification the function will create a folder for each week and place
-outputs files in there. 
+Create one main folder, in example called **WHO AFRO**.  
+Within this folder create an R project (e.g. **WHO_AFRO.Rproj**) - *remember to open R 
+through this project every time - to have the correct root directory*.  
+Within the **WHO AFRO** folder have a **Data** folder.  
+The **Data** folder contains a **Processed** folder which in turn has a folder for each
+calendar week. Place *IDSR data* for each country as *CSV* files in to the appropriate
+calendar week folder.  
+Within the **WHO AFRO** folder create an **Outputs** folder, and within that 
+a **Verification** folder. The package will create a folder for each calendar week
+and place, for each country, an excel with flags and a pdf letter with flags. 
 
 As an example: 
-
-* WHO AFRO
-   + Data
-      + Processed (contains IDSR data for each country) 
-      + Outputs  (where the output will go) 
-        + Verification
-   + WHO_AFRO.Rproj
-      
-
 
 <img src="man/figures/folder_layout.png"/>
 

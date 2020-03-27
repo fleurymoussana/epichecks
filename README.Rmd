@@ -70,10 +70,8 @@ As an example:
    + WHO_AFRO.Rproj
       
 
-```{r folders, echo = FALSE}
-## load image of folder structure
-knitr::include_graphics(system.file("extdata", "folder_layout.png", package = "epichecks"))
-```
+
+<img src="man/figures/folder_layout.png"/>
 
 ## Getting started 
 

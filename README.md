@@ -64,12 +64,11 @@ As an example:
   - WHO AFRO
       - Data
           - Processed (contains IDSR data for each country)
-          - Outputs (where the output will
-go)
+          - Outputs (where the output will go)
               - Verification
       - WHO\_AFRO.Rproj
 
-<img src="C:/Program Files/R/R-3.6.0/library/epichecks/extdata/folder_layout.png" width="100%" />
+<img src="man/figures/folder_layout.png"/>
 
 ## Getting started
 

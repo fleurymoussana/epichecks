@@ -71,17 +71,41 @@ As an example:
 
 <img src="man/figures/folder_layout.png"/>
 
-## Getting started
+## Weekly Country Feedback
 
-Open your R project and type the below code.
+This section explains how to make weekly feedback for countries based on
+pre-processed IDSR data.
+
+Open your R project (e.g. **WHO\_AFRO.Rproj**) and type the below code.
 
 This will produce outputs for week 35 of 2018 as an example. See
-?week\_report for details of parameters that can be adjusted.
+?week\_report for details of parameters that can be adjusted. *n.b. this
+can take a couple of minutes to run*
 
 ``` r
 library(epichecks)
 week_report(current_week = "2018-W35")
 ```
+
+This function creates an excel (**Country\_2018\_W35.xlsx**) with two
+tabs, the first flags missing disease counts data and the second flags
+when disease counts data exceeds pre-defined thresholds.  
+It also creates a pdf letter (**Country\_2018\_W35.pdf**) which
+summarises the flags in the excel.  
+These two files are created for each country.
+
+In addition it creates two files for internal WHO use.  
+The first is a summary of countries reporting, with counts of diseases,
+missings, and threshold flags (**SummaryReport\_2018\_W35.xlsx**).  
+The second is an *R* dataset with all the countries for that week
+combined. (**Merged.Rds**)
+
+Three dictionaries are included in the {epichecks} package, and used
+internally for processing.  
+These include country names, disease names and threshold alert
+definitions.
+
+<img src="man/figures/weekly_flow.png"/>
 
 Please note that the ‘epichecks’ project is released with a [Contributor
 Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this

@@ -107,6 +107,31 @@ definitions.
 
 <img src="man/figures/weekly_flow.png"/>
 
+## WHO AFRO Monthly Bulletin
+
+This section explains how to use an *R markdown* template to create
+monthly WHO AFRO bulletins which includes information from **IDSR data**
+and **PHE data**.
+
+To understand the basics of opening and using templates see this short
+[walkthrough](https://r4epis.netlify.com/outbreaks/#getting-started)
+from the *R4Epis* project.
+
+Once {epichecks} is installed you should be able to see the **WHO AFRO
+monthly bulletin** template as below. Save your RMD file in the root
+directory (i.e. the same place where your \*\*WHO\_AFRO.Rproj is saved).
+
+<img src="man/figures/template.png"/>
+
+You then need to **update the calendar week** sections of the code, see
+below. This can then be changed each month to produce the appropriate
+report.
+
+<img src="man/figures/code_updates.png"/>
+
+You can then knit to create a word document in the same folder where the
+*Rmd* file is saved.
+
 Please note that the ‘epichecks’ project is released with a [Contributor
 Code of Conduct](.github/CODE_OF_CONDUCT.md). By contributing to this
 project, you agree to abide by its terms.

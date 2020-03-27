@@ -58,9 +58,10 @@ Within this folder create an R project (e.g. **WHO\_AFRO.Rproj**) -
 *remember to open R through this project every time - to have the
 correct root directory*.  
 Within the **WHO AFRO** folder have a **Data** folder.  
-The **Data** folder contains a **Processed** folder which in turn has a
-folder for each calendar week. Place *IDSR data* for each country as
-*CSV* files in to the appropriate calendar week folder.  
+The **Data** folder contains the *PHE dataset* and a **Processed**
+folder which in turn has a folder for each calendar week.  
+Place *IDSR data* for each country as *CSV* files in to the appropriate
+calendar week folder.  
 Within the **WHO AFRO** folder create an **Outputs** folder, and within
 that a **Verification** folder. The package will create a folder for
 each calendar week and place, for each country, an excel with flags and

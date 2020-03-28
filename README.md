@@ -121,7 +121,7 @@ Once {epichecks} is installed you should be able to see the **WHO AFRO
 monthly bulletin** template as below. Save your RMD file in the root
 directory (i.e. the same place where your \*\*WHO\_AFRO.Rproj is saved).
 
-<!-- <img src="man/figures/template.png"/> -->
+<img src="man/figures/template.png"/>
 
 You then need to **update the calendar week** sections of the code, see
 below. This can then be changed each month to produce the appropriate

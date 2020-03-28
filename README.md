@@ -48,6 +48,16 @@ install.packages("remotes")
 remotes::install_github("R4IDSR/epichecks")
 ```
 
+If you do not have a LaTeX editor installed on your computer, then
+please run the following code to install TinyTex. This is needed in
+order to be able to create Word and PDF documents using *R markdown*.
+
+``` r
+install.packages('tinytex')
+tinytex::install_tinytex()
+# to uninstall TinyTeX, run tinytex::uninstall_tinytex() 
+```
+
 ## Folder set up
 
 In order for the funtions to work you need to have folders set up

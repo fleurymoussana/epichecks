@@ -69,7 +69,7 @@ a pdf letter with flags.
 
 As an example:
 
-<img src="man/figures/folder_layout.png"/>
+<!-- <img src="man/figures/folder_layout.png"/> -->
 
 ## Weekly Country Feedback
 

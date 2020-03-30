@@ -228,7 +228,14 @@ processed_data_agg <- processed_data_agg %>%
 shp_path <- system.file("extdata", "AFRO.shp", package = "epichecks")
 
 ## read in shapefile 
-afro_shp <- read_sf(shp_path)
+afro_shp <- read_sf(shp_path) 
+
+## get list of islands to subset
+islands <- c("Cape Verde", 
+             "Comoros", 
+             "Mauritius", 
+             "Seychelles", 
+             "Sao Tome and Principe")
 ```
 
 
@@ -659,8 +666,8 @@ afro_shp <- afro_shp %>%
 
 ## plot map --------------------------------------------------------------------
 
-## start an empy plot 
-ggplot() +
+## Plot the whole continent 
+overall_plot <- ggplot() +
   ## plot shapefile and fill by proportion reporting
   ## make the borders thin and grey
   geom_sf(data = afro_shp, 
@@ -700,6 +707,74 @@ ggplot() +
   ## get rid of axes and extras
   theme_void(base_size = 18) + 
   theme()
+
+
+## Plot islands individually 
+island_plot <- purrr::map(islands, 
+                         function(x) {
+                  ggplot() +
+                  ## plot shapefile and fill by proportion reporting
+                  ## make the borders thin and grey
+                  geom_sf(data = filter(afro_shp, country == x),
+                          aes(fill = prop_reps_cat), 
+                          size = 0.1,
+                          col = "grey80") + 
+                  ## set the colours for choropleth
+                  ## set missings to grey and label them Non-AFRO
+                  scale_fill_discrete_sequential(drop = FALSE, 
+                                    palette = "Greens", 
+                                    na.value = "grey60",
+                                    labels = c(levels(afro_shp$prop_reps_cat), 
+                                               "Non-AFRO"),
+                                    name = "Reporting in month (%)") +
+                  ## plot dots for total reports - size based on number
+                  geom_point(data = filter(afro_shp, country == x),
+                             aes(size = tot_reps, 
+                                 geometry = geometry, 
+                                 colour = "Total reports"),
+                             stat = "sf_coordinates") +
+                  ## plot dots for total reports - size based on number
+                  geom_point(data = filter(afro_shp, country == x), 
+                             aes(size = complete_reps, 
+                                 geometry = geometry, 
+                                 colour = "Non-missing reports"),
+                             stat = "sf_coordinates") +
+                  ## set the range in size of points
+                  scale_size_continuous(range = c(2,8),
+                                        name = "Number of reports") +
+                  ## set the colours of dots 
+                  scale_colour_manual(values = c("Dark red", "#F7C252"), 
+                                      name = "Report type") +
+                  ## adjust the size of dots for legend (colours only)
+                  guides(colour = guide_legend(override.aes = list(size = 4))) +
+                  ## add a scale bar
+                  # annotation_scale(location = "br") +
+                  ## get rid of axes and extras
+                  theme_void(base_size = 12) +
+                  theme(legend.position = "none", 
+                        panel.border = element_rect(colour = "black", fill = NA), 
+                        plot.margin = margin(10,
+                                             10,
+                                             10, 
+                                             10)
+                        ) + 
+                  ggtitle(x)
+                         }
+)
+
+
+
+## using {patchwork} - set the plot layout area 
+## The overall map goes from top left at 1,1 to bottom right at 10,10
+## the islands are plotted below that 
+## (think of this as upside-down cartesian coordinates)
+layout <- c(
+  area(t = 1, l = 1, b = 10, r = 10),
+  area(t = 11, l = 1, b = 12, r = 10)
+)
+
+overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
+
 ```
 
 

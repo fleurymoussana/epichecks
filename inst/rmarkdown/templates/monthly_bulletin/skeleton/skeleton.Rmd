@@ -470,13 +470,6 @@ ongoing events in the WHO African region.
   
 # II- Highlights 
 
-
-
-# III- Disease Surveillance in the African region 
-
-  
-## III-1. Completeness and timeliness in reporting to the WHO African region 
-
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// completeness \\\
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -579,7 +572,281 @@ complete_countries_prop <- str_glue(
 
 ```
 
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// timeliness \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ timeliness of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+```{r timeliness}
+
+## create timeliness variable --------------------------------------------------
+
+## set reporting deadline as the wednesday after week of interest (i.e. in week after)
+## function returns monday of current_week, add 9 days to that gives following Wed
+processed_data_agg <- processed_data_agg %>% 
+  mutate(report_deadline = week2date(epiweek) + 9)
+
+## fix the date submitted var
+## drop time from the variable by only keeping first 10 characters
+## change to date (the original input is day/month/year)
+processed_data_agg <- processed_data_agg %>% 
+  mutate(DataSubmissionDate = as.Date(
+    str_sub(DataSubmissionDate, 1, 10),
+    "%d/%m/%Y"))
+
+## Create a TRUE/FALSE variable for whether the report was submitted on time
+processed_data_agg <- processed_data_agg %>% 
+  mutate(on_time = DataSubmissionDate <= report_deadline)
+
+## overall timeliness ----------------------------------------------------------
+
+## get the theoretical number of reports 
+## AFRO countries * number of weeks
+theoretical_reports <- 47 * expected_reports
+
+## get counts of ontime and total reports by country and epiweek
+timely_report_wk <- processed_data_agg %>% 
+  group_by(country, epiweek) %>% 
+  summarise(not_late = sum(on_time),
+            reports = n())
+
+## get count of non-zero late rows and divide by theoretical reports
+num_timely_reports <- timely_report_wk %>% 
+  summarise(week_timely = sum(not_late != 0)) %>% 
+  summarise(sum(week_timely)) %>% 
+  pull()
+
+prop_timely_reports <- str_glue(
+  round(num_timely_reports / theoretical_reports * 100, digits = 0), 
+  "%")
+
+## weekly timeliness ----------------------------------------------------------
+
+## get the number of countries submitted on time by week 
+## and proportion of 47 AFRO countries
+wkly_num_timely_reports <- timely_report_wk %>% 
+  group_by(epiweek) %>% 
+  summarise(week_timely = sum(not_late != 0), 
+            prop_timely = round(week_timely / 47 * 100, 
+                                digits = 0)
+  )
+
+## paste bits together
+wkly_timeliness <- str_glue(
+  "{wkly_num_timely_reports$prop_timely}% during {week_subs}"
+  ) 
+
+```
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// thresholds \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ threshold analysis of IDSR data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->  
+
+```{r thresholds}
+
+## get diseases, countries and associated cases/deaths for alerts
+threshold_counts <- processed_data_agg %>% 
+  group_by(epiweek, country, disease) %>% 
+  filter(alert == "Flag") %>% 
+  summarise(cases = sum(number_of_cases, na.rm = TRUE), 
+            deaths = sum(number_of_deaths, na.rm = TRUE), 
+            CFR = round(cases/deaths, digits = 1), 
+            "Verification status" = NA) %>% 
+  ungroup()
+
+## get the number of unique diseases passing threshold
+treshold_disease_counts <- threshold_counts %>% 
+  summarise(n_distinct(disease))
+
+## get the number of countries with threshold alerts 
+threshold_country_counts <- threshold_counts %>% 
+  summarise(n_distinct(country))
+
+
+## top countries with events happening 
+top_triggers_countries <- threshold_counts %>% 
+  tab_linelist(disease, strata = country, row_total = TRUE) %>% 
+  select(-contains("proportion")) %>%  # drop proportion columns
+  mutate(countries = rowSums(select(., contains("n")) != 0)) %>% # count countries (sum non-zeros)
+  arrange(desc(Total)) %>%   # sort based on decreasing counts
+  top_n(5, Total)
+
+
+## pull together a sentence listing events if there were any
+top_triggers_list <- str_glue(" {top_triggers_countries$value} ({top_triggers_countries$Total} events in {top_triggers_countries$countries} countries)")
+
+```
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// ongoing_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ reporting events that are occuring based on PHE data.  
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r ongoing_events}
+
+## New events notified ---------------------------------------------------------
+
+## get new events and countries in month
+new_events <- phe_data %>% 
+  filter(week_notified_to_who %in% levels(current_weeks))
+
+## get number of new events
+count_new_events <- nrow(new_events)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_new_events == 0) {
+  events_list <- ""
+}
+
+if (count_new_events != 0) {
+  events_list <- c("These included", 
+                   str_glue(", {new_events$event} in {new_events$country}"), 
+                   "."
+  )
+}
+
+## Closed events  --------------------------------------------------------------
+
+## get closed events and countries in month
+closed_events <- phe_data %>% 
+  filter(week_event_closed %in% levels(current_weeks))
+
+## get number of closed events
+count_closed_events <- nrow(closed_events)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_closed_events == 0) {
+  closed_events_list <- ""
+}
+
+if (count_closed_events != 0) {
+  closed_events_list <- c("These included", 
+                   str_glue(", {closed_events$event} in {closed_events$country} (notified on {closed_events$date_notified_to_who})"), 
+                   "."
+  )
+}
+
+## Ongoing events  -------------------------------------------------------------
+
+## get ongoing events and countries in month
+ongoing_events <- phe_data %>% 
+  filter(status == "Ongoing")
+
+## get number of ongoing events
+count_ongoing_events <- nrow(ongoing_events)
+
+## get number of ongoing event types
+count_ongoing_events_types <- length(unique(ongoing_events$event)) 
+
+## get number of countries with ongoing events 
+count_ongoing_events_countries <- length(unique(ongoing_events$country))
+
+## leading causes of events 
+## get counts to plot later
+top_ongoing_events_base <- ongoing_events %>% 
+  tab_linelist(event) %>% 
+  arrange(desc(n))  # sort based on decreasing counts
+
+## pull the top 5 events
+top_ongoing_events <- top_ongoing_events_base %>%  
+  mutate(proportion = round(proportion, digits = 0)) %>% 
+  top_n(5)
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_ongoing_events == 0) {
+  top_events_list <- ""
+}
+
+if (count_ongoing_events != 0) {
+  top_events_list <- c("The leading causes of events were", 
+                   str_glue(" {top_ongoing_events$value} ({top_ongoing_events$n} events {top_ongoing_events$proportion}%)"), 
+                   "."
+  )
+}
+
+## get shorter version of events list for highlights
+highlights_events_list <- str_glue(" {top_ongoing_events$value} ({top_ongoing_events$n} events {top_ongoing_events$proportion}%)")
+
+
+## top countries with events happening 
+top_ongoing_events_countries <- ongoing_events %>% 
+  tab_linelist(country) %>% 
+  arrange(desc(n)) %>%   # sort based on decreasing counts
+  mutate(proportion = round(proportion, digits = 0)) %>% 
+  top_n(5)
+
+
+## pull together a sentence listing events if there were any
+## if not simply return an empty character 
+if (count_ongoing_events == 0) {
+  top_countries_list <- ""
+}
+
+if (count_ongoing_events != 0) {
+  top_countries_list <- c("The top five countries in terms of number of ongoing public health events were", 
+                   str_glue(" {top_ongoing_events_countries$value} ({top_ongoing_events_countries$n} events {top_ongoing_events_countries$proportion}%)"), 
+                   ".", 
+                   str_glue(" Indeed, {sum(top_ongoing_events_countries$proportion)}% of public health events are occuring in the top 5 countries.")
+  )
+}
+
+## get shorter version of events list for highlights
+highlights_country_list <- str_glue(" {top_ongoing_events_countries$value}")
+
+
+## reporting delay -------------------------------------------------------------
+
+median_report_delay <- summary(ongoing_events$reporting_delay, na.rm = TRUE)
+
+```
   
+  
++ `r num_cntry` of 47(`r prop_cntry`) submitted at least one IDSR report to the 
+WHO regional office for Africa (AFRO) during 
+`r str_glue("{current_month} {current_year}")` 
+`r str_glue("{start_week} to {end_week}")` versus 
+`r num_cntry_full` (`r prop_cntry_full` ) that submitted all `r expected_reports`
+expected reports. 
++ The weekly reporting completeness was `r wkly_completeness`. 
++ During `r str_glue("{current_month} {current_year}")` among the 
+`r theoretical_reports` (47x`r expected_reports`), `r num_timely_reports` were 
+submitted on time giving an overall timeliness of `r prop_timely_reports`. 
++ The weekly timeliness was as follows, for respective weeks: `r wkly_timeliness` 
++ A total of `r nrow(threshold_counts)` alert thresholds were triggered during 
+`r str_glue("{current_month} {current_year}")` for `r treshold_disease_counts`
+diseases or conditions under surveillance in `r threshold_country_counts` countries, 
+with requests for verification sent to Member States by the WHO AFRO. 
++ The top 5 diseases with alert thresholds triggered are: `r top_triggers_list` 
++ `r count_ongoing_events` outbreaks and other health emergencies are ongoing in
+the region in `r count_ongoing_events_countries`. 
++ The top 5 ongoing events are: `r highlights_events_list` 
++ `r highlights_country_list` are the top 5 countries in terms of number of ongoing
+events reported. 
+
+
+# III- Disease Surveillance in the African region 
+
+  
+## III-1. Completeness and timeliness in reporting to the WHO African region 
+
+
 **Completeness** 
 
 * During `r str_glue("{current_month} {current_year}")` (
@@ -780,77 +1047,6 @@ overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
 
 
 
-
-<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// timeliness \\\
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
- This section calculates counts and proportions for indicators used in 
- timeliness of IDSR data. 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
-
-```{r timeliness}
-
-## create timeliness variable --------------------------------------------------
-
-## set reporting deadline as the wednesday after week of interest (i.e. in week after)
-## function returns monday of current_week, add 9 days to that gives following Wed
-processed_data_agg <- processed_data_agg %>% 
-  mutate(report_deadline = week2date(epiweek) + 9)
-
-## fix the date submitted var
-## drop time from the variable by only keeping first 10 characters
-## change to date (the original input is day/month/year)
-processed_data_agg <- processed_data_agg %>% 
-  mutate(DataSubmissionDate = as.Date(
-    str_sub(DataSubmissionDate, 1, 10),
-    "%d/%m/%Y"))
-
-## Create a TRUE/FALSE variable for whether the report was submitted on time
-processed_data_agg <- processed_data_agg %>% 
-  mutate(on_time = DataSubmissionDate <= report_deadline)
-
-## overall timeliness ----------------------------------------------------------
-
-## get the theoretical number of reports 
-## AFRO countries * number of weeks
-theoretical_reports <- 47 * expected_reports
-
-## get counts of ontime and total reports by country and epiweek
-timely_report_wk <- processed_data_agg %>% 
-  group_by(country, epiweek) %>% 
-  summarise(not_late = sum(on_time),
-            reports = n())
-
-## get count of non-zero late rows and divide by theoretical reports
-num_timely_reports <- timely_report_wk %>% 
-  summarise(week_timely = sum(not_late != 0)) %>% 
-  summarise(sum(week_timely)) %>% 
-  pull()
-
-prop_timely_reports <- str_glue(
-  round(num_timely_reports / theoretical_reports * 100, digits = 0), 
-  "%")
-
-## weekly timeliness ----------------------------------------------------------
-
-## get the number of countries submitted on time by week 
-## and proportion of 47 AFRO countries
-wkly_num_timely_reports <- timely_report_wk %>% 
-  group_by(epiweek) %>% 
-  summarise(week_timely = sum(not_late != 0), 
-            prop_timely = round(week_timely / 47 * 100, 
-                                digits = 0)
-  )
-
-## paste bits together
-wkly_timeliness <- str_glue(
-  "{wkly_num_timely_reports$prop_timely}% during {week_subs}"
-  ) 
-
-```
-
-
 **Timeliness** 
 
 * During `r str_glue("{current_month} {current_year}")` among the 
@@ -910,7 +1106,6 @@ ggplot(combo_reports,
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 ```
-
 
 
 
@@ -1212,35 +1407,6 @@ base_map + legend + wrap_plots(island_plot, nrow = 1) + plot_layout(design = lay
   
 ## III-2. Alert thresholds for diseases and conditions under surveillance 
 
-<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// thresholds \\\
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
- This section calculates counts and proportions for indicators used in 
- threshold analysis of IDSR data. 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->  
-
-```{r thresholds}
-
-## get diseases, countries and associated cases/deaths for alerts
-threshold_counts <- processed_data_agg %>% 
-  group_by(epiweek, country, disease) %>% 
-  filter(alert == "Flag") %>% 
-  summarise(cases = sum(number_of_cases, na.rm = TRUE), 
-            deaths = sum(number_of_deaths, na.rm = TRUE), 
-            CFR = round(cases/deaths, digits = 1), 
-            "Verification status" = NA) %>% 
-  ungroup()
-
-## get the number of unique diseases passing threshold
-treshold_disease_counts <- threshold_counts %>% 
-  summarise(n_distinct(disease))
-
-## get the number of countries with threshold alerts 
-threshold_country_counts <- threshold_counts %>% 
-  summarise(n_distinct(country))
-
-```
 
 Except for outbreaks reported to WHO before the period covered by the current
 bulletin, the alert thresholds were triggered during 
@@ -1469,126 +1635,6 @@ for (i in loop_weeks) {
 # IV- Ongoing outbreaks and other health emergencies in the region 
 
 ## IV-1. Overview of ongoing events 
-
-
-<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/// ongoing_events \\\
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
- This section calculates counts and proportions for indicators used in 
- reporting events that are occuring based on PHE data.  
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
-
-```{r ongoing_events}
-
-## New events notified ---------------------------------------------------------
-
-## get new events and countries in month
-new_events <- phe_data %>% 
-  filter(week_notified_to_who %in% levels(current_weeks))
-
-## get number of new events
-count_new_events <- nrow(new_events)
-
-## pull together a sentence listing events if there were any
-## if not simply return an empty character 
-if (count_new_events == 0) {
-  events_list <- ""
-}
-
-if (count_new_events != 0) {
-  events_list <- c("These included", 
-                   str_glue(", {new_events$event} in {new_events$country}"), 
-                   "."
-  )
-}
-
-## Closed events  --------------------------------------------------------------
-
-## get closed events and countries in month
-closed_events <- phe_data %>% 
-  filter(week_event_closed %in% levels(current_weeks))
-
-## get number of closed events
-count_closed_events <- nrow(closed_events)
-
-## pull together a sentence listing events if there were any
-## if not simply return an empty character 
-if (count_closed_events == 0) {
-  closed_events_list <- ""
-}
-
-if (count_closed_events != 0) {
-  closed_events_list <- c("These included", 
-                   str_glue(", {closed_events$event} in {closed_events$country} (notified on {closed_events$date_notified_to_who})"), 
-                   "."
-  )
-}
-
-## Ongoing events  -------------------------------------------------------------
-
-## get ongoing events and countries in month
-ongoing_events <- phe_data %>% 
-  filter(status == "Ongoing")
-
-## get number of ongoing events
-count_ongoing_events <- nrow(ongoing_events)
-
-## get number of ongoing event types
-count_ongoing_events_types <- length(unique(ongoing_events$event))
-
-## leading causes of events 
-## get counts to plot later
-top_ongoing_events_base <- ongoing_events %>% 
-  tab_linelist(event) %>% 
-  arrange(desc(n))  # sort based on decreasing counts
-
-## pull the top 5 events
-top_ongoing_events <- top_ongoing_events_base %>%  
-  mutate(proportion = round(proportion, digits = 0)) %>% 
-  top_n(5)
-
-## pull together a sentence listing events if there were any
-## if not simply return an empty character 
-if (count_ongoing_events == 0) {
-  top_events_list <- ""
-}
-
-if (count_ongoing_events != 0) {
-  top_events_list <- c("The leading causes of events were", 
-                   str_glue(" {top_ongoing_events$value} ({top_ongoing_events$n} events {top_ongoing_events$proportion}%)"), 
-                   "."
-  )
-}
-
-## top countries with events happening 
-top_ongoing_events_countries <- ongoing_events %>% 
-  tab_linelist(country) %>% 
-  arrange(desc(n)) %>%   # sort based on decreasing counts
-  mutate(proportion = round(proportion, digits = 0)) %>% 
-  top_n(5)
-
-
-## pull together a sentence listing events if there were any
-## if not simply return an empty character 
-if (count_ongoing_events == 0) {
-  top_countries_list <- ""
-}
-
-if (count_ongoing_events != 0) {
-  top_countries_list <- c("The top five countries in terms of number of ongoing public health events were", 
-                   str_glue(" {top_ongoing_events_countries$value} ({top_ongoing_events_countries$n} events {top_ongoing_events_countries$proportion}%)"), 
-                   ".", 
-                   str_glue(" Indeed, {sum(top_ongoing_events_countries$proportion)}% of public health events are occuring in the top 5 countries.")
-  )
-}
-
-## reporting delay -------------------------------------------------------------
-
-median_report_delay <- summary(ongoing_events$reporting_delay, na.rm = TRUE)
-
-```
-  
 
 During `r str_glue("{current_month} {current_year}")`, `r count_new_events` new
 events were reported to WHO by the African region Member States. `r events_list`

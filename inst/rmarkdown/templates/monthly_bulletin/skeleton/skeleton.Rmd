@@ -3,6 +3,7 @@ title: "World Health Organization African Region  \nIntegrated Disease Surveilla
 output: 
   word_document: 
     toc: TRUE
+    keep_md: TRUE
 ---
 
 
@@ -2169,16 +2170,940 @@ overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
 
 
 
-
-
-
 ## IV-3. Measles outbreaks in the region 
-  
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// measles_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions for indicators used in 
+ reporting events that are occuring due to Measles based on outbreak linelist
+ data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r measles_events}
+
+## subset outbreak data set for Measles
+measles_outbreak_data <- outbreak_data %>% 
+  filter(outbreak == "Measles") 
+
+## pull together countries experiencing measles outbreak
+measles_countries <- str_c(
+  unique(measles_outbreak_data$country),
+  collapse = ", ")
+
+## get summary counts for african region 
+measles_counts <- measles_outbreak_data %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            cases_susp_prob = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE), 
+            
+            cases_conf = sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            
+            CFR = round(deaths / cases_total * 100, digits = 1))
+            
+```
+
+Among the `r nrow(outbreak_data)` ongoing outbreaks in the African region, 
+`r fmt_count(outbreak_data, outbreak == "Measles")` are due to measles outbreaks. 
+`r length(unique(measles_outbreak_data$country))` countries 
+are experiencing a measles outbreak: `r measles_countries`. 
+
+During `r str_glue("{current_month} {current_year}")`, 
+`r measles_counts$cases_total` cases have been reported 
+(`r measles_counts$cases_susp_prob` and `r measles_counts$cases_conf`) including
+`r measles_counts$deaths` (case fatality ratio : `r measles_counts$CFR`%). 
+
+**Figure 12**: Distribution of cases and CFR by week for 
+`r length(unique(measles_outbreak_data$country))` countries experiencing a 
+measles outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// measles_plot_overall \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r measles_plot_overall}
+
+## Prepare data for plotting ---------------------------------------------------
+
+measles_weekly <- measles_outbreak_data %>% 
+  group_by(epiweek) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0)) %>% 
+  mutate(cfr_cat = cut(CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+")))
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(measles_weekly, aes(x = epiweek, y = cases_total, fill = cfr_cat)) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "Reds",
+                                 drop = FALSE, 
+                                 name = "CFR (%)") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+**Figure 13**: Distribution of cases by country and week for 
+`r length(unique(measles_outbreak_data$country))` countries experiencing a 
+measles outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// measles_plot_countries \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by country
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r measles_plot_countries}
+
+## Prepare data for plotting ---------------------------------------------------
+
+measles_weekly_country <- measles_outbreak_data %>% 
+  group_by(epiweek, country) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  ungroup() %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0))
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(measles_weekly_country, aes(x = epiweek, y = cases_total, fill = reorder(country, cases_total))) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "viridis",
+                                  na.translate = FALSE, 
+                                  name = "Country") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+
+**Figure 14**: Spatial distribution of cumulative measles cases and CFR by country
+in the African region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// measles_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for countries experiencing a measles outbreak, including
+ dots for cases and deaths as well as chloropleth for CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r measles_map}
+
+## Prepare data for plotting ---------------------------------------------------
+
+measles_country <- measles_outbreak_data %>% 
+  group_by(country) %>% 
+  summarise(measles_cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            measles_deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            measles_CFR = round(measles_deaths / measles_cases_total * 100, digits = 1))
+
+
+
+## join counts to map 
+afro_shp <- left_join(afro_shp, measles_country, by = "country")
+
+
+## create a categorical variable using the age_categories function 
+## (we aren't using ages - but it functions the same way!)
+afro_shp <- afro_shp %>% 
+  mutate(measles_CFR = cut(measles_CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+"))) 
+
+
+## Change NAs for AFRO countries to be "No outbreak"
+## (leave non-AFRO as NA)
+afro_shp <- afro_shp %>% 
+  mutate(measles_CFR_cat = if_else(WHO_REG == "AFRO" & is.na(measles_CFR), 
+                               "No outbreak", as.character(measles_CFR)))
+
+## change back to a factor variable
+afro_shp <- afro_shp %>% 
+  mutate(measles_CFR_cat = factor(measles_CFR_cat, 
+                                  levels = c("No outbreak", 
+                                             levels(measles_CFR))))
+
+
+
+## Plot map --------------------------------------------------------------------
+
+## plot overall map for region 
+overall_plot <- ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = measles_CFR_cat), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_discrete_sequential(drop = FALSE, 
+                    palette = "Reds", 
+                    na.value = "Grey60",
+                    labels = c(levels(afro_shp$measles_CFR_cat), 
+                               "Non-AFRO"),
+                    name = "CFR(%)") +
+  ## plot dots for total cases - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = measles_cases_total, 
+                 geometry = geometry, 
+                 colour = "Cases"),
+             stat = "sf_coordinates") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = measles_deaths, 
+                 geometry = geometry, 
+                 colour = "Deaths"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10), 
+                        name = "Number of reports") +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                      name = "") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale(location = "br") +
+  ## get rid of axes and extras
+  theme_void(base_size = 18)
+
+
+## plot each of the islands seperately
+island_plot <- purrr::map(islands, 
+                         function(x) {
+                           ggplot() +
+                           ## plot shapefile and fill by proportion reporting
+                           ## make the borders thin and grey
+                           geom_sf(data = filter(afro_shp, country == x), 
+                                   aes(fill = measles_CFR_cat), 
+                                   size = 0.1,
+                                   col = "grey80") + 
+                           ## set the colours for choropleth
+                           ## set missings to grey and label them Non-AFRO
+                           scale_fill_discrete_sequential(drop = FALSE, 
+                                             palette = "Reds", 
+                                             na.value = "Grey60",
+                                             labels = c(levels(afro_shp$measles_CFR_cat), 
+                                                        "Non-AFRO"),
+                                             name = "CFR(%)") +
+                           ## plot dots for total cases - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = measles_cases_total, 
+                                          geometry = geometry, 
+                                          colour = "Cases"),
+                                      stat = "sf_coordinates") +
+                           ## plot dots for total reports - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = measles_deaths, 
+                                          geometry = geometry, 
+                                          colour = "Deaths"),
+                                      stat = "sf_coordinates") +
+                           ## set the range in size of points
+                           scale_size_continuous(range = c(3,10), 
+                                                 name = "Number of reports") +
+                           ## set the colours of dots 
+                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                                               name = "") +
+                           ## adjust the size of dots for legend (colours only)
+                           guides(colour = guide_legend(override.aes = list(size = 4))) +
+                           ## add a scale bar
+                           # annotation_scale(location = "br") +
+                           ## get rid of axes and extras
+                           theme_void(base_size = 12) +
+                           theme(legend.position = "none", 
+                           panel.border = element_rect(colour = "black", fill = NA), 
+                           plot.margin = margin(10,
+                                                10,
+                                                10, 
+                                                10)) + 
+                           ggtitle(x)
+                           
+                         }
+                         )
+
+## using {patchwork} - set the plot layout area 
+## The overall map goes from top left at 1,1 to bottom right at 10,10
+## the islands are plotted below that 
+## (think of this as upside-down cartesian coordinates)
+layout <- c(
+  area(t = 1, l = 1, b = 10, r = 10),
+  area(t = 11, l = 1, b = 12, r = 10))
+
+overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
+
+```
+
+
   
 ## IV-4. Poliomyelitis outbreaks in the region 
-  
-  
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// polio_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions fopr indicators used in 
+ reporting events that are occuring due to Polio based on outbreak linelist
+ data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r polio_events}
+
+## subset outbreak data set for Polio
+polio_outbreak_data <- outbreak_data %>% 
+  filter(outbreak == "Polio/ Acute Flaccid Paralysis") 
+
+## pull together countries experiencing polio outbreak
+polio_countries <- str_c(
+  unique(polio_outbreak_data$country),
+  collapse = ", ")
+
+## get summary counts for african region 
+polio_counts <- polio_outbreak_data %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            cases_susp_prob = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE), 
+            
+            cases_conf = sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            
+            CFR = round(deaths / cases_total * 100, digits = 1))
+            
+```
+
+Among the `r nrow(outbreak_data)` ongoing outbreaks in the African region, 
+`r fmt_count(outbreak_data, outbreak == "Polio/ Acute Flaccid Paralysis")` are 
+due to polio outbreaks. 
+`r length(unique(polio_outbreak_data$country))` countries 
+are experiencing a polio outbreak: `r polio_countries`. 
+
+During `r str_glue("{current_month} {current_year}")`, 
+`r polio_counts$cases_total` cases have been reported 
+(`r polio_counts$cases_susp_prob` and `r polio_counts$cases_conf`) including
+`r polio_counts$deaths` (case fatality ratio : `r polio_counts$CFR`%). 
+
+**Figure 15**: Distribution of cases and CFR by week for 
+`r length(unique(polio_outbreak_data$country))` countries experiencing a 
+polio outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// polio_plot_overall \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r polio_plot_overall}
+
+## Prepare data for plotting ---------------------------------------------------
+
+polio_weekly <- polio_outbreak_data %>% 
+  group_by(epiweek) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0)) %>% 
+  mutate(cfr_cat = cut(CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+")))
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(polio_weekly, aes(x = epiweek, y = cases_total, fill = cfr_cat)) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "Reds",
+                                 drop = FALSE, 
+                                 name = "CFR (%)") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+**Figure 16**: Distribution of cases by country and week for 
+`r length(unique(polio_outbreak_data$country))` countries experiencing a 
+polio outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// polio_plot_countries \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by country
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r polio_plot_countries}
+
+## Prepare data for plotting ---------------------------------------------------
+
+polio_weekly_country <- polio_outbreak_data %>% 
+  group_by(epiweek, country) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  ungroup() %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0))
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(polio_weekly_country, aes(x = epiweek, y = cases_total, fill = reorder(country, cases_total))) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "viridis",
+                                  na.translate = FALSE, 
+                                  name = "Country") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+
+**Figure 17**: Spatial distribution of cumulative polio cases and CFR by country
+in the African region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// polio_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for countries experiencing a polio outbreak, including
+ dots for cases and deaths as well as chloropleth for CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r polio_map}
+
+## Prepare data for plotting ---------------------------------------------------
+
+polio_country <- polio_outbreak_data %>% 
+  group_by(country) %>% 
+  summarise(polio_cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            polio_deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            polio_CFR = round(polio_deaths / polio_cases_total * 100, digits = 1))
+
+
+
+## join counts to map 
+afro_shp <- left_join(afro_shp, polio_country, by = "country")
+
+
+## create a categorical variable using the age_categories function 
+## (we aren't using ages - but it functions the same way!)
+afro_shp <- afro_shp %>% 
+  mutate(polio_CFR = cut(polio_CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+"))) 
+
+
+## Change NAs for AFRO countries to be "No outbreak"
+## (leave non-AFRO as NA)
+afro_shp <- afro_shp %>% 
+  mutate(polio_CFR_cat = if_else(WHO_REG == "AFRO" & is.na(polio_CFR), 
+                               "No outbreak", as.character(polio_CFR)))
+
+## change back to a factor variable
+afro_shp <- afro_shp %>% 
+  mutate(polio_CFR_cat = factor(polio_CFR_cat, 
+                                  levels = c("No outbreak", 
+                                             levels(polio_CFR))))
+
+
+
+## Plot map --------------------------------------------------------------------
+
+## plot overall map for region 
+overall_plot <- ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = polio_CFR_cat), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_discrete_sequential(drop = FALSE, 
+                    palette = "Reds", 
+                    na.value = "Grey60",
+                    labels = c(levels(afro_shp$polio_CFR_cat), 
+                               "Non-AFRO"),
+                    name = "CFR(%)") +
+  ## plot dots for total cases - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = polio_cases_total, 
+                 geometry = geometry, 
+                 colour = "Cases"),
+             stat = "sf_coordinates") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = polio_deaths, 
+                 geometry = geometry, 
+                 colour = "Deaths"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10), 
+                        name = "Number of reports") +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                      name = "") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale(location = "br") +
+  ## get rid of axes and extras
+  theme_void(base_size = 18)
+
+
+## plot each of the islands seperately
+island_plot <- purrr::map(islands, 
+                         function(x) {
+                           ggplot() +
+                           ## plot shapefile and fill by proportion reporting
+                           ## make the borders thin and grey
+                           geom_sf(data = filter(afro_shp, country == x), 
+                                   aes(fill = polio_CFR_cat), 
+                                   size = 0.1,
+                                   col = "grey80") + 
+                           ## set the colours for choropleth
+                           ## set missings to grey and label them Non-AFRO
+                           scale_fill_discrete_sequential(drop = FALSE, 
+                                             palette = "Reds", 
+                                             na.value = "Grey60",
+                                             labels = c(levels(afro_shp$polio_CFR_cat), 
+                                                        "Non-AFRO"),
+                                             name = "CFR(%)") +
+                           ## plot dots for total cases - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = polio_cases_total, 
+                                          geometry = geometry, 
+                                          colour = "Cases"),
+                                      stat = "sf_coordinates") +
+                           ## plot dots for total reports - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = polio_deaths, 
+                                          geometry = geometry, 
+                                          colour = "Deaths"),
+                                      stat = "sf_coordinates") +
+                           ## set the range in size of points
+                           scale_size_continuous(range = c(3,10), 
+                                                 name = "Number of reports") +
+                           ## set the colours of dots 
+                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                                               name = "") +
+                           ## adjust the size of dots for legend (colours only)
+                           guides(colour = guide_legend(override.aes = list(size = 4))) +
+                           ## add a scale bar
+                           # annotation_scale(location = "br") +
+                           ## get rid of axes and extras
+                           theme_void(base_size = 12) +
+                           theme(legend.position = "none", 
+                           panel.border = element_rect(colour = "black", fill = NA), 
+                           plot.margin = margin(10,
+                                                10,
+                                                10, 
+                                                10)) + 
+                           ggtitle(x)
+                           
+                         }
+                         )
+
+## using {patchwork} - set the plot layout area 
+## The overall map goes from top left at 1,1 to bottom right at 10,10
+## the islands are plotted below that 
+## (think of this as upside-down cartesian coordinates)
+layout <- c(
+  area(t = 1, l = 1, b = 10, r = 10),
+  area(t = 11, l = 1, b = 12, r = 10))
+
+overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
+
+```
+
+
 ## IV-5. Yellow fever outbreaks in the region 
+
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// yellowfever_events \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section calculates counts and proportions fopr indicators used in 
+ reporting events that are occuring due to yellow fever based on outbreak linelist
+ data. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r yellowfever_events}
+
+## subset outbreak data set for yellow fever
+yellowfever_outbreak_data <- outbreak_data %>% 
+  filter(outbreak == "Yellow Fever") 
+
+## pull together countries experiencing yellow fever outbreak
+yellowfever_countries <- str_c(
+  unique(yellowfever_outbreak_data$country),
+  collapse = ", ")
+
+## get summary counts for african region 
+yellowfever_counts <- yellowfever_outbreak_data %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            cases_susp_prob = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE), 
+            
+            cases_conf = sum(new_confirmed_cases, na.rm = TRUE), 
+            
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            
+            CFR = round(deaths / cases_total * 100, digits = 1))
+            
+```
+
+Among the `r nrow(outbreak_data)` ongoing outbreaks in the African region, 
+`r fmt_count(outbreak_data, outbreak == "Yellow Fever")` are 
+due to yellow fever outbreaks. 
+`r length(unique(yellowfever_outbreak_data$country))` countries 
+are experiencing a yellow fever outbreak: `r yellowfever_countries`. 
+
+During `r str_glue("{current_month} {current_year}")`, 
+`r yellowfever_counts$cases_total` cases have been reported 
+(`r yellowfever_counts$cases_susp_prob` and `r yellowfever_counts$cases_conf`) including
+`r yellowfever_counts$deaths` (case fatality ratio : `r yellowfever_counts$CFR`%). 
+
+**Figure 18**: Distribution of cases and CFR by week for 
+`r length(unique(yellowfever_outbreak_data$country))` countries experiencing a 
+yellow fever outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// yellowfever_plot_overall \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r yellowfever_plot_overall}
+
+## Prepare data for plotting ---------------------------------------------------
+
+yellowfever_weekly <- yellowfever_outbreak_data %>% 
+  group_by(epiweek) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0)) %>% 
+  mutate(cfr_cat = cut(CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+")))
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(yellowfever_weekly, aes(x = epiweek, y = cases_total, fill = cfr_cat)) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "Reds",
+                                 drop = FALSE, 
+                                 name = "CFR (%)") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+**Figure 19**: Distribution of cases by country and week for 
+`r length(unique(yellowfever_outbreak_data$country))` countries experiencing a 
+yellow fever outbreak in the African region
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// yellowfever_plot_countries \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a bar chart for cases over time, filled by country
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r yellowfever_plot_countries}
+
+## Prepare data for plotting ---------------------------------------------------
+
+yellowfever_weekly_country <- yellowfever_outbreak_data %>% 
+  group_by(epiweek, country) %>% 
+  summarise(cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            CFR = round(deaths / cases_total * 100, digits = 1)) %>% 
+  ungroup() %>% 
+  complete(epiweek, fill = list(cases_total = 0, 
+                                deaths = 0, 
+                                CFR = 0))
+
+
+## Plot bar charts -------------------------------------------------------------
+
+ggplot(yellowfever_weekly_country, aes(x = epiweek, y = cases_total, fill = reorder(country, cases_total))) + 
+  geom_bar(stat = "identity") + 
+  scale_fill_discrete_sequential(palette = "viridis",
+                                  na.translate = FALSE, 
+                                  name = "Country") + 
+  ## make the y axes meet at origin
+  scale_y_continuous(expand = c(0, 0)) + 
+  ## change axis labels
+  labs(x = "Calendar week", 
+       y = "Cases (n)") + 
+  ## use basic black/white plot
+  theme_classic(base_size = 18) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+```
+
+
+**Figure 20**: Spatial distribution of cumulative yellow fever cases and CFR by country
+in the African region as of `r format(aweek::week2date(end_week) + 7, "%d/%m/%Y")`
+
+<!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/// yellowfever_map \\\
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ This section plots a map for countries experiencing a yellow fever outbreak, including
+ dots for cases and deaths as well as chloropleth for CFR
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ --> 
+
+```{r yellowfever_map}
+
+## Prepare data for plotting ---------------------------------------------------
+
+yellowfever_country <- yellowfever_outbreak_data %>% 
+  group_by(country) %>% 
+  summarise(yellowfever_cases_total = sum(new_suspected_cases, na.rm = TRUE) + 
+              sum(new_probable_cases, na.rm = TRUE) + 
+              sum(new_confirmed_cases, na.rm = TRUE),
+            yellowfever_deaths = sum(new_deaths_suspected, na.rm = TRUE) + 
+              sum(new_deaths_confirmed_cases, na.rm = TRUE), 
+            yellowfever_CFR = round(yellowfever_deaths / yellowfever_cases_total * 100, digits = 1))
+
+
+
+## join counts to map 
+afro_shp <- left_join(afro_shp, yellowfever_country, by = "country")
+
+
+## create a categorical variable using the age_categories function 
+## (we aren't using ages - but it functions the same way!)
+afro_shp <- afro_shp %>% 
+  mutate(yellowfever_CFR = cut(yellowfever_CFR, breaks = c(0, 0.1, 1:5, 100), 
+                       include.lowest = TRUE, 
+                       labels = c("<0.1", "0.1-1.0", "1.1-2.0", "2.1-3.0", 
+                                  "3.1-4.0", "4.1-5", "5+"))) 
+
+
+## Change NAs for AFRO countries to be "No outbreak"
+## (leave non-AFRO as NA)
+afro_shp <- afro_shp %>% 
+  mutate(yellowfever_CFR_cat = if_else(WHO_REG == "AFRO" & is.na(yellowfever_CFR), 
+                               "No outbreak", as.character(yellowfever_CFR)))
+
+## change back to a factor variable
+afro_shp <- afro_shp %>% 
+  mutate(yellowfever_CFR_cat = factor(yellowfever_CFR_cat, 
+                                  levels = c("No outbreak", 
+                                             levels(yellowfever_CFR))))
+
+
+
+## Plot map --------------------------------------------------------------------
+
+## plot overall map for region 
+overall_plot <- ggplot() +
+  ## plot shapefile and fill by proportion reporting
+  ## make the borders thin and grey
+  geom_sf(data = afro_shp, 
+          aes(fill = yellowfever_CFR_cat), 
+          size = 0.1,
+          col = "grey80") + 
+  ## set the colours for choropleth
+  ## set missings to grey and label them Non-AFRO
+  scale_fill_discrete_sequential(drop = FALSE, 
+                    palette = "Reds", 
+                    na.value = "Grey60",
+                    labels = c(levels(afro_shp$yellowfever_CFR_cat), 
+                               "Non-AFRO"),
+                    name = "CFR(%)") +
+  ## plot dots for total cases - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = yellowfever_cases_total, 
+                 geometry = geometry, 
+                 colour = "Cases"),
+             stat = "sf_coordinates") +
+  ## plot dots for total reports - size based on number
+  geom_point(data = afro_shp, 
+             aes(size = yellowfever_deaths, 
+                 geometry = geometry, 
+                 colour = "Deaths"),
+             stat = "sf_coordinates") +
+  ## set the range in size of points
+  scale_size_continuous(range = c(3,10), 
+                        name = "Number of reports") +
+  ## set the colours of dots 
+  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                      name = "") +
+  ## adjust the size of dots for legend (colours only)
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  ## add a scale bar
+  annotation_scale(location = "br") +
+  ## get rid of axes and extras
+  theme_void(base_size = 18)
+
+
+## plot each of the islands seperately
+island_plot <- purrr::map(islands, 
+                         function(x) {
+                           ggplot() +
+                           ## plot shapefile and fill by proportion reporting
+                           ## make the borders thin and grey
+                           geom_sf(data = filter(afro_shp, country == x), 
+                                   aes(fill = yellowfever_CFR_cat), 
+                                   size = 0.1,
+                                   col = "grey80") + 
+                           ## set the colours for choropleth
+                           ## set missings to grey and label them Non-AFRO
+                           scale_fill_discrete_sequential(drop = FALSE, 
+                                             palette = "Reds", 
+                                             na.value = "Grey60",
+                                             labels = c(levels(afro_shp$yellowfever_CFR_cat), 
+                                                        "Non-AFRO"),
+                                             name = "CFR(%)") +
+                           ## plot dots for total cases - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = yellowfever_cases_total, 
+                                          geometry = geometry, 
+                                          colour = "Cases"),
+                                      stat = "sf_coordinates") +
+                           ## plot dots for total reports - size based on number
+                           geom_point(data = filter(afro_shp, country == x), 
+                                      aes(size = yellowfever_deaths, 
+                                          geometry = geometry, 
+                                          colour = "Deaths"),
+                                      stat = "sf_coordinates") +
+                           ## set the range in size of points
+                           scale_size_continuous(range = c(3,10), 
+                                                 name = "Number of reports") +
+                           ## set the colours of dots 
+                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                                               name = "") +
+                           ## adjust the size of dots for legend (colours only)
+                           guides(colour = guide_legend(override.aes = list(size = 4))) +
+                           ## add a scale bar
+                           # annotation_scale(location = "br") +
+                           ## get rid of axes and extras
+                           theme_void(base_size = 12) +
+                           theme(legend.position = "none", 
+                           panel.border = element_rect(colour = "black", fill = NA), 
+                           plot.margin = margin(10,
+                                                10,
+                                                10, 
+                                                10)) + 
+                           ggtitle(x)
+                           
+                         }
+                         )
+
+## using {patchwork} - set the plot layout area 
+## The overall map goes from top left at 1,1 to bottom right at 10,10
+## the islands are plotted below that 
+## (think of this as upside-down cartesian coordinates)
+layout <- c(
+  area(t = 1, l = 1, b = 10, r = 10),
+  area(t = 11, l = 1, b = 12, r = 10))
+
+overall_plot / wrap_plots(island_plot, nrow = 1) + plot_layout(design = layout)
+
+```
+
 
 # V- Interpretation of the epidemiological situation and recommendations to Member States
 

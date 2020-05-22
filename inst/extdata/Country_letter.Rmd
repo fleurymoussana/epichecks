@@ -45,7 +45,7 @@ To Whom it May Concern,
 ` `  
 ` `  
 
-**Regarding: `r i` IDSR data for week `r current_week`** 
+**Regarding: `r i` IDSR data for week `r current_epiweek`** 
 
 ` `  
 ` `  
@@ -55,7 +55,7 @@ Dear Sir or Madam,
 ` `
 
 This is to acknowledge receipt of routine surveillance data for your country (`r i`)
-for week `r current_week` and to thank you for your 
+for week `r current_epiweek` and to thank you for your 
 continuous contribution to the global health security in the African region. 
 
 In order to continuously improve the effectiveness of disease surveillance in the 
@@ -131,7 +131,7 @@ A qui de droit,
 ` `  
 ` ` 
 
-**Sujet: `r i` Donées de SIMR relatives à la semaine `r current_week`**
+**Sujet: `r i` Donées de SIMR relatives à la semaine `r current_epiweek`**
 
 ` `  
 ` `  
@@ -141,7 +141,7 @@ Cher Monsieur ou Madame,
 ` `
 
 Nouse accusons réception des donées de surveillance de routine de votre pays (`r i`)
-de la semaine `r current_week` et vous remercions de votre 
+de la semaine `r current_epiweek` et vous remercions de votre 
 inlassable contribution à la sécurité sanitaire mondiale dans la région africaine.  
 
 

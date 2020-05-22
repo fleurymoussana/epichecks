@@ -8,31 +8,37 @@ country PDF letters, a weekly excel summary report and will aggregate country
 data in to one large dataframe.}
 \usage{
 week_report(
-  current_week = "2018-W35",
+  current_year = 2020,
+  current_week = 1,
   week_start = "Monday",
-  input_path = here::here("Data", "Processed"),
-  output_path = here::here("Data", "Outputs", "Verification")
+  input_path = here::here("Data Files"),
+  output_path = here::here("Data Files", "Output")
 )
 }
 \arguments{
-\item{current_week}{The week of interest as a character or {aweek} object.
-Needs to be in the correct format ("YYYY-Www").
-The default "2018-W35" is just to demonstrate the necessary format.}
+\item{current_year}{The year of interest as numeric (e.g. the default is 2020)}
+
+\item{current_week}{The week of interest as numeric. The default is 1.
+Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+could also enter 01 and it would be fine)}
 
 \item{week_start}{First day of the week as accepted for {aweek}.
 The default for this is "Monday" to confirm with ISO standards.}
 
 \item{input_path}{File path where IDSR processed data is. The default is set
-to your current directory, within the "Data" folder which should contain a
-subfolder called "Processed" and then within that a folder for each week with
-the appropriate data. The week forlder should be named the same way as
-the current_week param.}
+to your current directory, within the "Data Files" folder which should contain a
+subfolder called "!Imported". Within "!Imported", there should be a folder for
+each year - which has to fit to the current_year parameter above.
+Within that a folder for each week, fitting to the current_week param.
+All excel files within this folder will be read in.}
 
 \item{output_path}{File path where you would like outputs to be saved to.
-Within this folder a new folder will be created and named after the current week.
-This defaults to your current directory, with subfolders of data > outputs > verification.
-These folders need to exist already - only the current week folder will be created.
-The file itself will labelled with the current week, e.g. "SummaryReport_2018-w35.xlsx"}
+Within this folder a new folder will be created for the current year, and
+within that the current week.
+This defaults to your current directory, with subfolders of
+Data Files > Output > 2020 > 01.
+The year folder needs to exist already - only the current week folder will be created.
+The file itself will labelled with the current week, e.g. "SummaryReport_2020-w01.xlsx"}
 }
 \description{
 Wrapper for IDSR data processing and reporting functions in {epichecks}.

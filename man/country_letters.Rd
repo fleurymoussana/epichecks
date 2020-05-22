@@ -11,8 +11,9 @@ and all being stored in a list with a data frame for each country.}
 country_letters(
   x,
   flags = flags,
-  current_week = "2018-W35",
-  output_path = here::here("Data", "Outputs", "Verification")
+  current_year = 2020,
+  current_week = 1,
+  output_path = here::here("Data Files", "Output")
 )
 }
 \arguments{
@@ -22,14 +23,18 @@ country_letters(
 \item{flags}{A list including missings and alert flags for each country, produced
 by {country_feedback}}
 
-\item{current_week}{The week of interest as a character or {aweek} object.
-Needs to be in the correct format ("YYYY-Www").
-The default "2018-W35" is just to demonstrate the necessary format.}
+\item{current_year}{The year of interest as numeric (e.g. the default is 2020)}
+
+\item{current_week}{The week of interest as numeric. The default is 1.
+Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+could also enter 01 and it would be fine)}
 
 \item{output_path}{File path where you would like outputs to be saved to.
-Within this folder a new folder will be created and named after the current week.
-This defaults to your current directory, with subfolders of data > outputs > verification.
-These folders need to exist already - only the current week folder will be created.}
+Within this folder a new folder will be created for the current year, and
+within that the current week.
+This defaults to your current directory, with subfolders of
+Data Files > Output > 2020 > 01.
+The year folder needs to exist already - only the current week folder will be created.}
 }
 \description{
 Create PDF letters with feedback for countries. Returns an PDF document

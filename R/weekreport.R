@@ -3,24 +3,28 @@
 #' country PDF letters, a weekly excel summary report and will aggregate country
 #' data in to one large dataframe.
 #'
-#' @param current_week The week of interest as a character or {aweek} object.
-#' Needs to be in the correct format ("YYYY-Www").
-#' The default "2018-W35" is just to demonstrate the necessary format.
+#' @param current_year The year of interest as numeric (e.g. the default is 2020)
+#' @param current_week The week of interest as numeric. The default is 1.
+#' Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+#' could also enter 01 and it would be fine)
 #' @param week_start First day of the week as accepted for {aweek}.
 #' The default for this is "Monday" to confirm with ISO standards.
 #' @param input_path File path where IDSR processed data is. The default is set
-#' to your current directory, within the "Data" folder which should contain a
-#' subfolder called "Processed" and then within that a folder for each week with
-#' the appropriate data. The week forlder should be named the same way as
-#' the current_week param.
+#' to your current directory, within the "Data Files" folder which should contain a
+#' subfolder called "!Imported". Within "!Imported", there should be a folder for
+#' each year - which has to fit to the current_year parameter above.
+#' Within that a folder for each week, fitting to the current_week param.
+#' All excel files within this folder will be read in.
 #' @param output_path File path where you would like outputs to be saved to.
-#' Within this folder a new folder will be created and named after the current week.
-#' This defaults to your current directory, with subfolders of data > outputs > verification.
-#' These folders need to exist already - only the current week folder will be created.
-#' The file itself will labelled with the current week, e.g. "SummaryReport_2018-w35.xlsx"
+#' Within this folder a new folder will be created for the current year, and
+#' within that the current week.
+#' This defaults to your current directory, with subfolders of
+#' Data Files > Output > 2020 > 01.
+#' The year folder needs to exist already - only the current week folder will be created.
+#' The file itself will labelled with the current week, e.g. "SummaryReport_2020-w01.xlsx"
 #'
 #' @importFrom aweek set_week_start as.aweek
-#' @importFrom stringr str_glue
+#' @importFrom stringr str_pad str_glue
 #' @importFrom rio import_list
 #' @importFrom purrr map
 #' @importFrom here here
@@ -33,25 +37,30 @@
 #' in to one dataset.
 #'
 #' @export
-week_report <- function(current_week = "2018-W35",
+week_report <- function(current_year = 2020,
+                        current_week = 1,
                         week_start   = "Monday",
-                        input_path   = here::here("Data", "Processed"),
-                        output_path  = here::here("Data", "Outputs", "Verification")
+                        input_path   = here::here("Data Files"),
+                        output_path  = here::here("Data Files", "Output")
                         ) {
 
   ## set the day that defines the beginning of your epiweek.
   aweek::set_week_start(week_start)
 
-  ## set the current epiweek
-  current_week <- aweek::as.aweek(current_week)
 
-  ## get paths of all the files in a folder with .csv file format
-  file_paths <- Sys.glob(str_glue(input_path, "/",
-                                  current_week,  "/", "*.csv"))
+  ## pad the current week so it is always two values long
+  current_week <- stringr::str_pad({current_week}, 2, pad = 0)
+
+  ## set the current epiweek
+  current_epiweek <- aweek::as.aweek(str_glue("{current_year}-W{current_week}"))
+
+  ## get paths of all the files in a folder with .xlsx file format
+  file_paths <- Sys.glob(str_glue(input_path, "/", current_year, "/",
+                                  current_week,  "/!Imported/", "*.xlsx"))
 
   ## import each excel file individually saved in a list
   ## do not bind them together imediately
-  processed_data <- import_list(file_paths, rbind = FALSE, na = "NULL")
+  processed_data <- rio::import_list(file_paths, rbind = FALSE, na = "NULL")
 
   ## apply cleaning steps to each country dataset in list
   processed_data <- purrr::map(processed_data, clean_idsr)
@@ -71,21 +80,26 @@ week_report <- function(current_week = "2018-W35",
   ## run country_feedback to produce excel sheet with flags for each country
   ## and return a list with missings and alert flags for each country
   flags <- country_feedback(processed_data,
+                            current_year = current_year,
                             current_week = current_week,
                             output_path  = output_path)
 
   ## run country_letters to produce feedback letters for each country
   country_letters(processed_data,
                   flags = flags,
+                  current_year = current_year,
                   current_week = current_week,
                   output_path  = output_path)
 
   ## run aggregator function to pull together a merged dataset
   processed_data_agg <- aggregator(processed_data,
-                                   output_path = str_glue(output_path, "/", current_week, "/Merged.Rds"))
+                                   output_path = str_glue(output_path, "/",
+                                                          current_year, "/",
+                                                          current_week, "/Merged.Rds"))
 
   ## run weekly_summary function to produce an excel overview of reports
   summary_report <- weekly_summary(processed_data_agg,
+                                   current_year = current_year,
                                    current_week = current_week,
                                    output_path = output_path)
 }

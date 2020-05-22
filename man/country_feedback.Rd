@@ -11,22 +11,25 @@ and all being stored in a list with a data frame for each country.}
 \usage{
 country_feedback(
   x,
-  current_week = "2018-W35",
-  output_path = here::here("Data", "Outputs", "Verification")
+  current_year = 2020,
+  current_week = 1,
+  output_path = here::here("Data Files", "Output")
 )
 }
 \arguments{
 \item{x}{A list of data frames which has been processed with {clean_idsr},
 {missing_checker} and {threshold_checker}.}
 
-\item{current_week}{The week of interest as a character or {aweek} object.
-Needs to be in the correct format ("YYYY-Www").
-The default "2018-W35" is just to demonstrate the necessary format.}
+\item{current_year}{The year of interest as numeric (e.g. the default is 2020)}
+
+\item{current_week}{The week of interest as numeric. The default is 1.
+Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+could also enter 01 and it would be fine)}
 
 \item{output_path}{File path where you would like outputs to be saved to.
 Within this folder a new folder will be created and named after the current week.
 This defaults to your current directory, with subfolders of data > outputs > verification.
-These folders need to exist already - only the current week folder will be created.}
+The year folder needs to exist already - only the current week folder will be created.}
 }
 \description{
 Create excel sheets with feedback for countries. Returns an excel workbook

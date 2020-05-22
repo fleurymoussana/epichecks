@@ -6,22 +6,24 @@
 \usage{
 weekly_summary(
   x,
-  current_week = "2018-W35",
-  output_path = here::here("Data", "Outputs", "Verification")
+  current_year = 2020,
+  current_week = 1,
+  output_path = here::here("Data Files", "Output")
 )
 }
 \arguments{
 \item{x}{A data frame of IDSR data which has been created from {aggregator}}
 
-\item{current_week}{The week of interest as a character or {aweek} object.
-Needs to be in the correct format ("YYYY-Www").
-The default "2018-W35" is just to demonstrate the necessary format.}
+\item{current_year}{The year of interest as numeric (e.g. the default is 2020)}
+
+\item{current_week}{The week of interest as numeric. The default is 1.
+Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+could also enter 01 and it would be fine)}
 
 \item{output_path}{File path where you would like outputs to be saved to.
 Within this folder a new folder will be created and named after the current week.
 This defaults to your current directory, with subfolders of data > outputs > verification.
-These folders need to exist already - only the current week folder will be created.
-The file itself will labelled with the current week, e.g. "SummaryReport_2018-w35.xlsx"}
+The year folder needs to exist already - only the current week folder will be created.}
 }
 \description{
 Create an excel summary report of data submitted for week by each country.

@@ -14,7 +14,7 @@
 missing_checker <- function(x) {
 
   ## filter dataset for those missing cases or deaths
-  x <- filter(x, (is.na(number_of_cases) | is.na(number_of_deaths)))
+  # x <- filter(x, (is.na(number_of_cases) | is.na(number_of_deaths)))
 
   ## create seperate variables with comments if missing case or deaths
   x <- mutate(x, case_miss = if_else(is.na(number_of_cases) &

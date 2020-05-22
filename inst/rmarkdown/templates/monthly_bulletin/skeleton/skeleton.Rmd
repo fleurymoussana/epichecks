@@ -20,25 +20,44 @@ is Monday.
 ```{r define_current_month, echo = FALSE}
 
 ## set the current year 
-current_year <- 2018
+current_year <- 2020
 
 ## set the current month 
 current_month <- "January"
 
+## set the first week of interest 
+current_week_start <- 1
+
+## set the last week of interest
+current_week_stop <- 5
+
 ## set the day that defines the beginning of your epiweek.
 aweek::set_week_start("Monday")
 
+
+#### The parts below are automated (do not change these) 
+
+
+## pad the current weeks so it is always two values long
+current_week_start <- stringr::str_pad({current_week_start}, 2, pad = 0)
+current_week_stop <- stringr::str_pad({current_week_stop}, 2, pad = 0)
+ 
+
 ## set starting week for the month
-start_week <- aweek::as.aweek("2018-W01")
+start_week <- aweek::as.aweek(stringr::str_glue("{current_year}-W{current_week_start}"))
 
 ## set the ending week 
-end_week <- aweek::as.aweek("2018-W05")
+end_week <- aweek::as.aweek(stringr::str_glue("{current_year}-W{current_week_stop}"))
 
-## pull together all weeks of interest 
+## pull together all weeks of interest as epiweeks factor
 current_weeks <- aweek::factor_aweek(
   c(start_week,
     end_week)
   )
+
+## pull together all weeks of interest as numbers 
+current_weeks_nums <- factor(stringr::str_pad(current_week_start:current_week_stop, 
+                                     2, pad = 0))
 ```
 
 
@@ -72,7 +91,9 @@ knitr::opts_chunk$set(echo = FALSE,       # hide all code chunks in output
                       )
 
 ## set default NA to -
-options(knitr.kable.NA = "-")
+## stop scientific notation (relevant for big numbers)
+options(knitr.kable.NA = "-", 
+        scipen = 999)
 
 ## Installing required packages for this template
 required_packages <- c("aweek",      # converting between epiweeks and dates
@@ -150,10 +171,10 @@ for (pkg in git_packages) {
 ```{r read_IDSR_data}
 
 ## file path where IDSR processed data is
-input_path <- here::here("Data", "Processed")
+input_path <- here::here("Data Files")
 
-## get paths of all the files in weeks of interest folders with .csv file format
-file_paths <- Sys.glob(str_glue("{input_path}/{levels(current_weeks)}/*.csv"))
+## get paths of all the files in weeks of interest folders with .xlsx file format
+file_paths <- Sys.glob(str_glue("{input_path}/{current_year}/{levels(current_weeks_nums)}/!Imported/*.xlsx"))
 
 ## import each excel file individually saved in a list
 ## do not bind them together imediately
@@ -291,7 +312,7 @@ processed_data_agg <- processed_data_agg %>%
 ```{r read_PHE_data}
 
 ## file path where PHE data is
-input_path_phe <- here::here("Data", "2017_2019_PHE_31_10_2019.xlsx") 
+input_path_phe <- here::here("Data Files", "2017_2019_PHE_31_10_2019.xlsx") 
 
 
 ## import the monitoring sheet from the excel file
@@ -400,7 +421,7 @@ phe_data$country[phe_data$country == "UR Tanzania"] <- "Tanzania (Mainland)"
 
 
 ## file path where outbreak data is
-input_path_outbreak <- here::here("Data", "Outbreak weekly notification_compilation.xlsx") 
+input_path_outbreak <- here::here("Data Files", "Outbreak weekly notification_compilation.xlsx") 
 
 
 ## import the first sheet from the excel file
@@ -592,12 +613,9 @@ processed_data_agg <- processed_data_agg %>%
   mutate(report_deadline = week2date(epiweek) + 9)
 
 ## fix the date submitted var
-## drop time from the variable by only keeping first 10 characters
 ## change to date (the original input is day/month/year)
 processed_data_agg <- processed_data_agg %>% 
-  mutate(DataSubmissionDate = as.Date(
-    str_sub(DataSubmissionDate, 1, 10),
-    "%d/%m/%Y"))
+  mutate(DataSubmissionDate = as.Date(DataSubmissionDate, origin = "1899-12-30"))
 
 ## Create a TRUE/FALSE variable for whether the report was submitted on time
 processed_data_agg <- processed_data_agg %>% 
@@ -737,7 +755,7 @@ if (count_closed_events == 0) {
 
 if (count_closed_events != 0) {
   closed_events_list <- c("These included", 
-                   str_glue(", {closed_events$event} in {closed_events$country} (notified on {closed_events$date_notified_to_who})"), 
+                   str_glue(" {closed_events$event} in {closed_events$country} (notified on {closed_events$date_notified_to_who})"), 
                    "."
   )
 }
@@ -802,7 +820,6 @@ if (count_ongoing_events == 0) {
 if (count_ongoing_events != 0) {
   top_countries_list <- c("The top five countries in terms of number of ongoing public health events were", 
                    str_glue(" {top_ongoing_events_countries$value} ({top_ongoing_events_countries$n} events {top_ongoing_events_countries$proportion}%)"), 
-                   ".", 
                    str_glue(" Indeed, {sum(top_ongoing_events_countries$proportion)}% of public health events are occuring in the top 5 countries.")
   )
 }
@@ -966,7 +983,7 @@ overall_plot <- ggplot() +
   scale_size_continuous(range = c(2,8),
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("Dark red", "#F7C252"), 
+  scale_colour_manual(values = c("#8b0000", "#F7C252"), 
                       name = "Report type") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -1011,7 +1028,7 @@ island_plot <- purrr::map(islands,
                   scale_size_continuous(range = c(2,8),
                                         name = "Number of reports") +
                   ## set the colours of dots 
-                  scale_colour_manual(values = c("Dark red", "#F7C252"), 
+                  scale_colour_manual(values = c("#8b0000", "#F7C252"), 
                                       name = "Report type") +
                   ## adjust the size of dots for legend (colours only)
                   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -1093,7 +1110,7 @@ ggplot(combo_reports,
   ## plot as bar, use the numbers as-is, put bars next to each other 
   geom_bar(stat = "identity", position = "dodge") + 
   ## choose colours and labels for variables
-  scale_fill_manual(values = c("Dark red", "#AEB6E5"), 
+  scale_fill_manual(values = c("#8b0000", "#AEB6E5"), 
                     labels = c("Complete", "On-time"), 
                     name = "") + 
   ## make the y axes meet at origin and go to 100
@@ -1175,7 +1192,7 @@ ggplot(combo_reports,
   ## plot as bar, use the numbers as-is, put bars next to each other 
   geom_bar(stat = "identity", position = "dodge") + 
   ## choose colours and labels for variables
-  scale_fill_manual(values = c("Dark red", "#AEB6E5"), 
+  scale_fill_manual(values = c("#8b0000", "#AEB6E5"), 
                     labels = c("Complete", "On-time"), 
                     name = "") + 
   ## add horizontal line at 0 for reference 
@@ -1507,7 +1524,7 @@ for (i in loop_weeks) {
   thresh_var <- str_c("threshold_counts_", i)
   
   ## create categorical variable out of threshold_counts for week
-  afro_shp[[thresh_var]] <- cut(afro_shp[[thresh_var]],
+  afro_shp[[thresh_var]] <- cut(as.numeric(afro_shp[[thresh_var]]),
            breaks = c(0, 1, 100, 200, 300, 400, 500, Inf),
            include.lowest = TRUE,
            labels = c("0", "1-100", "101-200", "201-300", "301-400", "401-500", ">500")
@@ -1520,7 +1537,7 @@ for (i in loop_weeks) {
   disease_var <- str_c("disease_counts_", i)
   
   ## create categorical variable out of threshold_counts for week
-  afro_shp[[disease_var]] <- cut(afro_shp[[disease_var]],
+  afro_shp[[disease_var]] <- cut(as.numeric(afro_shp[[disease_var]]),
            breaks = c(0, 1, 2, 3, 4, Inf),
            include.lowest = FALSE,
            labels = c(1, 2, 3, 4, 5)
@@ -1951,8 +1968,9 @@ are experiencing a cholera outbreak: `r cholera_countries`.
 
 During `r str_glue("{current_month} {current_year}")`, 
 `r cholera_counts$cases_total` cases have been reported 
-(`r cholera_counts$cases_susp_prob` and `r cholera_counts$cases_conf`) including
-`r cholera_counts$deaths` (case fatality ratio : `r cholera_counts$CFR`%). 
+(`r cholera_counts$cases_susp_prob` suspected and `r cholera_counts$cases_conf`
+confirmed) including `r cholera_counts$deaths` deaths
+(case fatality ratio : `r cholera_counts$CFR`%). 
 
 **Figure 9**: Distribution of cases and CFR by week for 
 `r length(unique(cholera_outbreak_data$country))` countries experiencing a 
@@ -2138,7 +2156,7 @@ overall_plot <- ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+  scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                       name = "") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2182,7 +2200,7 @@ island_plot <- purrr::map(islands,
                            scale_size_continuous(range = c(3,10), 
                                                  name = "Number of reports") +
                            ## set the colours of dots 
-                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                           scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                                                name = "") +
                            ## adjust the size of dots for legend (colours only)
                            guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2263,8 +2281,9 @@ are experiencing a measles outbreak: `r measles_countries`.
 
 During `r str_glue("{current_month} {current_year}")`, 
 `r measles_counts$cases_total` cases have been reported 
-(`r measles_counts$cases_susp_prob` and `r measles_counts$cases_conf`) including
-`r measles_counts$deaths` (case fatality ratio : `r measles_counts$CFR`%). 
+(`r measles_counts$cases_susp_prob` suspected and `r measles_counts$cases_conf` 
+confirmed) including `r measles_counts$deaths` deaths
+(case fatality ratio : `r measles_counts$CFR`%). 
 
 **Figure 12**: Distribution of cases and CFR by week for 
 `r length(unique(measles_outbreak_data$country))` countries experiencing a 
@@ -2450,7 +2469,7 @@ overall_plot <- ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+  scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                       name = "") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2494,7 +2513,7 @@ island_plot <- purrr::map(islands,
                            scale_size_continuous(range = c(3,10), 
                                                  name = "Number of reports") +
                            ## set the colours of dots 
-                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                           scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                                                name = "") +
                            ## adjust the size of dots for legend (colours only)
                            guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2576,8 +2595,8 @@ are experiencing a polio outbreak: `r polio_countries`.
 
 During `r str_glue("{current_month} {current_year}")`, 
 `r polio_counts$cases_total` cases have been reported 
-(`r polio_counts$cases_susp_prob` and `r polio_counts$cases_conf`) including
-`r polio_counts$deaths` (case fatality ratio : `r polio_counts$CFR`%). 
+(`r polio_counts$cases_susp_prob` suspected and `r polio_counts$cases_conf` 
+confirmed) including `r polio_counts$deaths` deaths (case fatality ratio : `r polio_counts$CFR`%). 
 
 **Figure 15**: Distribution of cases and CFR by week for 
 `r length(unique(polio_outbreak_data$country))` countries experiencing a 
@@ -2763,7 +2782,7 @@ overall_plot <- ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+  scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                       name = "") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2807,7 +2826,7 @@ island_plot <- purrr::map(islands,
                            scale_size_continuous(range = c(3,10), 
                                                  name = "Number of reports") +
                            ## set the colours of dots 
-                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                           scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                                                name = "") +
                            ## adjust the size of dots for legend (colours only)
                            guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -2888,8 +2907,9 @@ are experiencing a yellow fever outbreak: `r yellowfever_countries`.
 
 During `r str_glue("{current_month} {current_year}")`, 
 `r yellowfever_counts$cases_total` cases have been reported 
-(`r yellowfever_counts$cases_susp_prob` and `r yellowfever_counts$cases_conf`) including
-`r yellowfever_counts$deaths` (case fatality ratio : `r yellowfever_counts$CFR`%). 
+(`r yellowfever_counts$cases_susp_prob` susepcted and
+`r yellowfever_counts$cases_conf` confirmed) including
+`r yellowfever_counts$deaths` deaths (case fatality ratio : `r yellowfever_counts$CFR`%). 
 
 **Figure 18**: Distribution of cases and CFR by week for 
 `r length(unique(yellowfever_outbreak_data$country))` countries experiencing a 
@@ -3075,7 +3095,7 @@ overall_plot <- ggplot() +
   scale_size_continuous(range = c(3,10), 
                         name = "Number of reports") +
   ## set the colours of dots 
-  scale_colour_manual(values = c("#F7C252", "Dark red"), 
+  scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                       name = "") +
   ## adjust the size of dots for legend (colours only)
   guides(colour = guide_legend(override.aes = list(size = 4))) +
@@ -3119,7 +3139,7 @@ island_plot <- purrr::map(islands,
                            scale_size_continuous(range = c(3,10), 
                                                  name = "Number of reports") +
                            ## set the colours of dots 
-                           scale_colour_manual(values = c("#F7C252", "Dark red"), 
+                           scale_colour_manual(values = c("#F7C252", "#8b0000"), 
                                                name = "") +
                            ## adjust the size of dots for legend (colours only)
                            guides(colour = guide_legend(override.aes = list(size = 4))) +

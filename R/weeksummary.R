@@ -1,14 +1,14 @@
 #' Create an excel summary report of data submitted for week by each country.
 #'
 #' @param x A data frame of IDSR data which has been created from {aggregator}
-#' @param current_week The week of interest as a character or {aweek} object.
-#' Needs to be in the correct format ("YYYY-Www").
-#' The default "2018-W35" is just to demonstrate the necessary format.
+#' @param current_year The year of interest as numeric (e.g. the default is 2020)
+#' @param current_week The week of interest as numeric. The default is 1.
+#' Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+#' could also enter 01 and it would be fine)
 #' @param output_path File path where you would like outputs to be saved to.
 #' Within this folder a new folder will be created and named after the current week.
 #' This defaults to your current directory, with subfolders of data > outputs > verification.
-#' These folders need to exist already - only the current week folder will be created.
-#' The file itself will labelled with the current week, e.g. "SummaryReport_2018-w35.xlsx"
+#' The year folder needs to exist already - only the current week folder will be created.
 #'
 #' @importFrom dplyr mutate filter group_by summarise if_else tibble left_join select n
 #' @importFrom aweek week2date
@@ -23,8 +23,9 @@
 #'
 #' @export
 weekly_summary <- function(x,
-                           current_week = "2018-W35",
-                           output_path  = here::here("Data", "Outputs", "Verification")
+                           current_year = 2020,
+                           current_week = 1,
+                           output_path  = here::here("Data Files", "Output")
                            ) {
 
 
@@ -48,24 +49,30 @@ weekly_summary <- function(x,
                         "Uganda",
                         "Zambia", "Zimbabwe")
 
+
+    ## pad the current week so it is always two values long
+    current_week <- str_pad({current_week}, 2, pad = 0)
+
+    ## set the current epiweek
+    current_epiweek <- aweek::as.aweek(str_glue("{current_year}-W{current_week}"))
+
     ## set reporting deadline as the wednesday after week of interest (i.e. in week after)
     ## function returns monday of current_week, add 9 days to that gives followed Wed
-    report_deadline <- week2date(current_week) + 9
+    report_deadline <- week2date(current_epiweek) + 9
 
 
     ## fix the date submitted var
-    ## drop time from the variable by only keeping first 10 characters
     ## change to date (the original input is day/month/year)
     x <- mutate(x,
-                DataSubmissionDate = as.Date(
-                  str_sub(DataSubmissionDate, 1, 10),
-                  "%d/%m/%Y"))
+                DataSubmissionDate = as.Date(DataSubmissionDate,
+                                             origin = "1899-12-30")
+                )
 
 
     ## get numbers for weekly summary report for each country
 
     ## filter for current week of interest
-    summary_counts <- filter(x, epiweek == current_week)
+    summary_counts <- filter(x, epiweek == current_epiweek)
 
     ## do for each country individually
     summary_counts <- group_by(summary_counts, country)
@@ -107,7 +114,7 @@ weekly_summary <- function(x,
     summary_report <- mutate(summary_report,
                              nb_dis      = replace_na(nb_dis, 0),
                              nb_reg      = replace_na(nb_reg, 0),
-                             week_report = replace_na(week_report, current_week),
+                             week_report = replace_na(week_report, current_epiweek),
                              submitted   = replace_na(submitted, "No"),
                              on_time     = replace_na(on_time, "Not applicable")
                              )
@@ -127,14 +134,16 @@ weekly_summary <- function(x,
 
 
     ## pull together file path for the current week
-    week_path <- str_glue(output_path, "/", current_week)
+    week_path <-  str_glue(output_path, "/",
+                           current_year, "/",
+                           current_week)
 
     ## save summary in appropriate week folder as excel
     ## pull together path and name for file
-    file_path <- str_glue(week_path, "/SummaryReport_", current_week, ".xlsx")
+    file_path <- str_glue(week_path, "/SummaryReport_", current_epiweek, ".xlsx")
 
     ## export message list to file
-    export(summary_report, file = file_path, which = current_week)
+    export(summary_report, file = file_path, which = current_epiweek)
 
     ## return dataset
     summary_report

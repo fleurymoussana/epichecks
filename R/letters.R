@@ -8,16 +8,19 @@
 #'  {missing_checker} and {threshold_checker}.
 #' @param flags A list including missings and alert flags for each country, produced
 #' by {country_feedback}
-#' @param current_week The week of interest as a character or {aweek} object.
-#' Needs to be in the correct format ("YYYY-Www").
-#' The default "2018-W35" is just to demonstrate the necessary format.
+#' @param current_year The year of interest as numeric (e.g. the default is 2020)
+#' @param current_week The week of interest as numeric. The default is 1.
+#' Values less than 10 are padded with leading zeros, e.g. 1 becomes 01. (You
+#' could also enter 01 and it would be fine)
 #' @param output_path File path where you would like outputs to be saved to.
-#' Within this folder a new folder will be created and named after the current week.
-#' This defaults to your current directory, with subfolders of data > outputs > verification.
-#' These folders need to exist already - only the current week folder will be created.
+#' Within this folder a new folder will be created for the current year, and
+#' within that the current week.
+#' This defaults to your current directory, with subfolders of
+#' Data Files > Output > 2020 > 01.
+#' The year folder needs to exist already - only the current week folder will be created.
 #'
 #' @importFrom aweek as.aweek
-#' @importFrom stringr str_glue
+#' @importFrom stringr str_pad str_glue
 #' @importFrom here here
 #' @importFrom rmarkdown render
 #'
@@ -28,15 +31,21 @@
 #' @export
 country_letters <- function(x,
                             flags = flags,
-                            current_week = "2018-W35",
-                            output_path  = here::here("Data", "Outputs", "Verification")
+                            current_year = 2020,
+                            current_week = 1,
+                            output_path  = here::here("Data Files", "Output")
                             ) {
 
-  ## make current_week an {aweek} object
-  current_week <- aweek::as.aweek(current_week)
+  ## pad the current week so it is always two values long
+  current_week <- str_pad({current_week}, 2, pad = 0)
+
+  ## set the current epiweek
+  current_epiweek <- aweek::as.aweek(str_glue("{current_year}-W{current_week}"))
 
   ## pull together file path for the current week
-  week_path <- str_glue(output_path, "/", current_week)
+  week_path <-  str_glue(output_path, "/",
+                         current_year, "/",
+                         current_week)
 
   ## pull the two datasets out of the list
   message_list <- flags$message_list
@@ -49,7 +58,7 @@ country_letters <- function(x,
     ## use the rmarkdown template and save a pdf in the appropriate week folder
     rmarkdown::render(input = system.file("extdata", "Country_letter.Rmd", package = "epichecks"),
                       output_format = "pdf_document",
-                      output_file = str_glue(i, "_", current_week, ".pdf"),
+                      output_file = str_glue(i, "_", current_epiweek, ".pdf"),
                       output_dir = week_path)
   }
 }

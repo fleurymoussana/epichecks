@@ -1,5 +1,5 @@
 ---
-title: "World Health Organization African Region  \nIntegrated Disease Surveillance and Response  \nMonthly Epidemiological Bulletin  \nBulletin N°2018-01 (January 2018)"
+title: "World Health Organization African Region  \nIntegrated Disease Surveillance and Response  \nMonthly Epidemiological Bulletin  \nBulletin N°2020-01 (January 2020)"
 output: 
   word_document: 
     toc: TRUE

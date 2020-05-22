@@ -60,22 +60,22 @@ tinytex::install_tinytex()
 
 ## Folder set up
 
-In order for the funtions to work you need to have folders set up
-correctly.
+The package is set up to run from to the WHO AFRO sharepoint IDSR
+folder.
 
-Create one main folder, in example called **WHO AFRO**.  
-Within this folder create an R project (e.g. **WHO\_AFRO.Rproj**) -
-*remember to open R through this project every time - to have the
-correct root directory*.  
-Within the **WHO AFRO** folder have a **Data** folder.  
-The **Data** folder contains the *PHE dataset* and a **Processed**
-folder which in turn has a folder for each calendar week.  
-Place *IDSR data* for each country as *CSV* files in to the appropriate
-calendar week folder.  
-Within the **WHO AFRO** folder create an **Outputs** folder, and within
-that a **Verification** folder. The package will create a folder for
+Within the main **IDSR** folder create an R project
+(e.g. **WHO\_AFRO.Rproj**) - *remember to open R through this project
+every time - to have the correct root directory*.  
+Within the **IDSR** folder have a **Data Files** folder.  
+The **Data Files** folder contains the *PHE dataset*, the **Outbreak
+reporting dataset** and a folder for each **Year** which in turn has a
+folder for each **calendar week**.  
+Each calendar week has *IDSR data* for each country with an
+**\!Imported** folder, as *XLSX* files.  
+Within the **Data Files** folder create an **Output** folder, and within
+that a folder for each **Year**. The package will create a folder for
 each calendar week and place, for each country, an excel with flags and
-a pdf letter with flags.
+a pdf letter.
 
 As an example:
 
@@ -88,25 +88,25 @@ pre-processed IDSR data.
 
 Open your R project (e.g. **WHO\_AFRO.Rproj**) and type the below code.
 
-This will produce outputs for week 35 of 2018 as an example. See
+This will produce outputs for week 1 of 2020 as an example. See
 ?week\_report for details of parameters that can be adjusted. *n.b. this
 can take a couple of minutes to run*
 
 ``` r
 library(epichecks)
-week_report(current_week = "2018-W35")
+week_report(current_year = 2020, current_week = 1)
 ```
 
-This function creates an excel (**Country\_2018\_W35.xlsx**) with two
+This function creates an excel (**Country\_2020\_W01.xlsx**) with two
 tabs, the first flags missing disease counts data and the second flags
 when disease counts data exceeds pre-defined thresholds.  
-It also creates a pdf letter (**Country\_2018\_W35.pdf**) which
+It also creates a pdf letter (**Country\_2020\_W01.pdf**) which
 summarises the flags in the excel.  
 These two files are created for each country.
 
 In addition it creates two files for internal WHO use.  
 The first is a summary of countries reporting, with counts of diseases,
-missings, and threshold flags (**SummaryReport\_2018\_W35.xlsx**).  
+missings, and threshold flags (**SummaryReport\_2020\_W01.xlsx**).  
 The second is an *R* dataset with all the countries for that week
 combined. (**Merged.Rds**)
 
@@ -120,8 +120,8 @@ definitions.
 ## WHO AFRO Monthly Bulletin
 
 This section explains how to use an *R markdown* template to create
-monthly WHO AFRO bulletins which includes information from **IDSR data**
-and **PHE data**.
+monthly WHO AFRO bulletins which includes information from **IDSR
+data**, **PHE data** and \*\*Outbreak monitoring data\*.
 
 To understand the basics of opening and using templates see this short
 [walkthrough](https://r4epis.netlify.com/outbreaks/#getting-started)
@@ -133,7 +133,8 @@ directory (i.e. the same place where your \*\*WHO\_AFRO.Rproj is saved).
 
 <img src="man/figures/template.png"/>
 
-You then need to **update the calendar week** sections of the code, see
+You then need to make sure that **file paths** are correct for the
+datasets, and **update the calendar week** sections of the code, see
 below. This can then be changed each month to produce the appropriate
 report.
 

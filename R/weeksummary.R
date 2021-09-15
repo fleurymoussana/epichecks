@@ -45,7 +45,7 @@ weekly_summary <- function(x,
                         "Rwanda",
                         "Sao Tome and Principe", "Senegal", "Seychelles",
                         "Sierra Leone", "South Africa", "South Sudan",
-                        "Tanzania (Mainland)", "Tanzania (Zanzibar)", "Togo",
+                        "United Republic of Tanzania", "Togo",
                         "Uganda",
                         "Zambia", "Zimbabwe")
 

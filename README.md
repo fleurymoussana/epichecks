@@ -5,8 +5,6 @@
 
 <!-- badges: start -->
 
-[![Travis build
-status](https://travis-ci.org/R4IDSR/epichecks.svg?branch=master)](https://travis-ci.org/R4IDSR/epichecks)
 [![AppVeyor build
 status](https://ci.appveyor.com/api/projects/status/github/R4IDSR/epichecks?branch=master&svg=true)](https://ci.appveyor.com/project/R4IDSR/epichecks)
 [![Codecov test
@@ -71,7 +69,7 @@ The **Data Files** folder contains the *PHE dataset*, the **Outbreak
 reporting dataset** and a folder for each **Year** which in turn has a
 folder for each **calendar week**.  
 Each calendar week has *IDSR data* for each country with an
-**\!Imported** folder, as *XLSX* files.  
+**!Imported** folder, as *XLSX* files.  
 Within the **Data Files** folder create an **Output** folder, and within
 that a folder for each **Year**. The package will create a folder for
 each calendar week and place, for each country, an excel with flags and

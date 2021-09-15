@@ -47,7 +47,7 @@ threshold_checker <- function(x) {
 
     ## for malaria based on multiple of previous week
     Threshold_type == "Malaria" &
-      number_of_cases >= lag(number_of_cases) * 1.5 ~   "Flag",
+      number_of_cases > lag(number_of_cases) * 1.5 ~   "Flag",
 
     ## else missing
     TRUE ~ NA_character_
